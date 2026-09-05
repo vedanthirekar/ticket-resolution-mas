@@ -23,7 +23,7 @@ controlled from the employee dashboard.
 ## 2. Intake contract
 
 An intake request contains a stable source-scoped idempotency key, complaint text,
-an optional claimed customer reference, source, and priority. Creation of the case,
+an optional claimed customer reference, and source. Creation of the case,
 its `case_received` event, and its first processing job occurs in one PostgreSQL
 transaction.
 
@@ -53,7 +53,10 @@ the current-state projection. No `WAITING_FOR_CUSTOMER` state exists in v1.
 
 PostgreSQL is the MVP queue. Workers claim one eligible job under a row lock using
 `FOR UPDATE SKIP LOCKED`, set an owner and lease expiry, and increment the attempt
-count. This provides:
+count. Eligible jobs are processed FIFO by availability and creation time. The MVP
+does not classify customer-reported urgency. A future version may combine
+deterministic impact rules, an evaluated model classifier with confidence
+thresholds, and auditable human overrides. This provides:
 
 - one claimant per job at a time;
 - horizontal worker concurrency without a separate broker;

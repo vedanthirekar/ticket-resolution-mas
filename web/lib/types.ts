@@ -4,7 +4,6 @@ export type CaseRecord = {
   claimed_customer_reference: string | null;
   claimed_category: string | null;
   complaint_text: string;
-  priority: string;
   status: string;
   received_at: string;
   category?: string | null;

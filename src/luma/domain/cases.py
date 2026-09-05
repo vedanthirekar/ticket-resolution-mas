@@ -19,12 +19,6 @@ class CaseSource(StrEnum):
     API = "api"
 
 
-class CasePriority(StrEnum):
-    NORMAL = "normal"
-    HIGH = "high"
-    URGENT = "urgent"
-
-
 class ClaimedCaseCategory(StrEnum):
     """Customer-selected routing hint; never treated as authoritative evidence."""
 

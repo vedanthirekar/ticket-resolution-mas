@@ -16,7 +16,7 @@ reports remain builder-only artifacts.
 
 - Authenticated `GET /api/operations/overview` provides operational status counts,
   active/pending/escalated totals, resolution rate, and average resolution time.
-- Authenticated `GET /api/operations/cases` supports status, priority, source,
+- Authenticated `GET /api/operations/cases` supports status, source,
   category, text/reference search, bounded pagination, and latest-run outcomes.
 - `GET /api/operations/cases/{reference}` assembles the latest run, evidence,
   policy citations, proposal, verification, action lifecycle, escalations, case

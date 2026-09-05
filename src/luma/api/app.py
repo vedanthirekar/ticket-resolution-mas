@@ -134,7 +134,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         external_request_key=payload.external_request_key,
                         claimed_customer_reference=payload.claimed_customer_reference,
                         claimed_category=payload.claimed_category,
-                        priority=payload.priority,
                     ),
                 )
         except IdempotencyConflictError as error:
@@ -244,7 +243,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         _: OperationsAccountDependency,
         session: SessionDependency,
         status_filter: str | None = Query(default=None, alias="status"),
-        priority: str | None = None,
         source: str | None = None,
         category: str | None = None,
         query: str | None = None,
@@ -254,7 +252,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         rows = await list_operations_cases(
             session,
             status=status_filter,
-            priority=priority,
             source=source,
             category=category,
             query=query,

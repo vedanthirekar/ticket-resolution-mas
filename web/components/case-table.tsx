@@ -13,18 +13,17 @@ export function CaseTable({ cases }: { cases: CaseRecord[] }) {
   return (
     <div className="table-wrap">
       <table>
-        <thead><tr><th>Case</th><th>Category</th><th>Status</th><th>Priority</th><th>Source</th><th>Age</th></tr></thead>
+        <thead><tr><th>Case</th><th>Category</th><th>Status</th><th>Source</th><th>Age</th></tr></thead>
         <tbody>
           {cases.map((item) => (
             <tr key={item.public_reference}>
               <td><Link className="case-link" href={`/operations/cases/${item.public_reference}`}>{item.public_reference}</Link><small>{item.complaint_text}</small></td>
               <td><Label value={item.category ?? item.claimed_category} /></td>
               <td><Status value={item.status} /></td>
-              <td className={`priority priority-${item.priority}`}>{item.priority}</td>
               <td>{item.source}</td><td>{age(item.received_at)}</td>
             </tr>
           ))}
-          {!cases.length && <tr><td colSpan={6} className="empty">No cases match this view.</td></tr>}
+          {!cases.length && <tr><td colSpan={5} className="empty">No cases match this view.</td></tr>}
         </tbody>
       </table>
     </div>

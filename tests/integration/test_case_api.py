@@ -46,7 +46,6 @@ async def test_api_intake_retry_and_authenticated_case_queue(database) -> None:
                     "source": "manual",
                     "external_request_key": request_key,
                     "claimed_category": "cancellation_fee_dispute",
-                    "priority": "normal",
                 }
                 created = await client.post("/api/cases", json=payload)
                 retried = await client.post("/api/cases", json=payload)

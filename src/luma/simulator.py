@@ -17,7 +17,6 @@ class SimulatedTicket:
     scenario: str
     customer_reference: str
     claimed_category: str
-    priority: str
     complaint: str
 
 
@@ -44,7 +43,6 @@ def submit_ticket(api_url: str, ticket: SimulatedTicket) -> dict[str, Any]:
             "external_request_key": f"sim-{ticket.scenario}-{uuid4().hex}",
             "claimed_customer_reference": ticket.customer_reference,
             "claimed_category": ticket.claimed_category,
-            "priority": ticket.priority,
         }
     ).encode()
     request = Request(

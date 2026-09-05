@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import case, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,17 +52,12 @@ async def claim_next_job(
             & (ProcessingJob.lease_expires_at <= claim_time)
         ),
     )
-    priority_order = case(
-        (SupportCase.priority == "urgent", 0),
-        (SupportCase.priority == "high", 1),
-        else_=2,
-    )
     job = (
         await session.execute(
             select(ProcessingJob)
             .join(SupportCase, SupportCase.id == ProcessingJob.case_id)
             .where(eligible)
-            .order_by(priority_order, ProcessingJob.available_at, ProcessingJob.created_at)
+            .order_by(ProcessingJob.available_at, ProcessingJob.created_at)
             .limit(1)
             .with_for_update(of=ProcessingJob, skip_locked=True)
         )

@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from luma.domain.cases import CasePriority, CaseSource, ClaimedCaseCategory
+from luma.domain.cases import CaseSource, ClaimedCaseCategory
 
 
 class CaseCreateRequest(BaseModel):
@@ -14,7 +14,6 @@ class CaseCreateRequest(BaseModel):
     external_request_key: str = Field(min_length=1, max_length=128)
     claimed_customer_reference: str | None = Field(default=None, max_length=32)
     claimed_category: ClaimedCaseCategory | None = None
-    priority: CasePriority = CasePriority.NORMAL
 
 
 class CaseResponse(BaseModel):
@@ -25,7 +24,6 @@ class CaseResponse(BaseModel):
     claimed_customer_reference: str | None
     claimed_category: str | None
     complaint_text: str
-    priority: str
     status: str
     received_at: datetime
     created: bool | None = None

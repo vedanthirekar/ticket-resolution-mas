@@ -14,7 +14,6 @@ from luma.db.models.case_management import CaseEvent, ProcessingJob, SupportCase
 from luma.db.models.organization import Customer
 from luma.domain.cases import (
     ALLOWED_CASE_TRANSITIONS,
-    CasePriority,
     CaseSource,
     CaseStatus,
     ClaimedCaseCategory,
@@ -40,7 +39,6 @@ class CreateCaseCommand:
     external_request_key: str
     claimed_customer_reference: str | None = None
     claimed_category: ClaimedCaseCategory | None = None
-    priority: CasePriority = CasePriority.NORMAL
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +55,6 @@ def _fingerprint(command: CreateCaseCommand, complaint_text: str) -> str:
                 command.claimed_category.value if command.claimed_category is not None else None
             ),
             "complaint_text": complaint_text,
-            "priority": command.priority.value,
             "source": command.source.value,
         },
         sort_keys=True,
@@ -105,7 +102,6 @@ async def create_case(session: AsyncSession, command: CreateCaseCommand) -> Crea
             command.claimed_category.value if command.claimed_category is not None else None
         ),
         "complaint_text": complaint_text,
-        "priority": command.priority.value,
         "status": CaseStatus.QUEUED.value,
         "version": 1,
     }

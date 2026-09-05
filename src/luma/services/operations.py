@@ -102,7 +102,6 @@ async def list_operations_cases(
     session: AsyncSession,
     *,
     status: str | None = None,
-    priority: str | None = None,
     source: str | None = None,
     category: str | None = None,
     query: str | None = None,
@@ -129,8 +128,6 @@ async def list_operations_cases(
     )
     if status is not None:
         statement = statement.where(SupportCase.status == status)
-    if priority is not None:
-        statement = statement.where(SupportCase.priority == priority)
     if source is not None:
         statement = statement.where(SupportCase.source == source)
     if category is not None:

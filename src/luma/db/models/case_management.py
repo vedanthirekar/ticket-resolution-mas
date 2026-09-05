@@ -62,7 +62,6 @@ class SupportCase(UuidPrimaryKeyMixin, TimestampMixin, Base):
             "'membership_credits', 'online_booking_unavailable', 'other')",
             name="valid_claimed_category",
         ),
-        CheckConstraint("priority IN ('normal', 'high', 'urgent')", name="valid_priority"),
         CheckConstraint(
             "status IN ('received', 'queued', 'processing', 'pending_approval', "
             "'resolved', 'human_investigation', 'failed')",
@@ -86,7 +85,6 @@ class SupportCase(UuidPrimaryKeyMixin, TimestampMixin, Base):
     claimed_customer_reference: Mapped[str | None] = mapped_column(String(32))
     claimed_category: Mapped[str | None] = mapped_column(String(48))
     complaint_text: Mapped[str] = mapped_column(Text, nullable=False)
-    priority: Mapped[str] = mapped_column(String(16), nullable=False, default="normal")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="received")
     received_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

@@ -129,8 +129,7 @@ POST /api/cases
   "source": "manual",
   "external_request_key": "manual-demo-001",
   "claimed_customer_reference": "CUS-000102",
-  "claimed_category": "cancellation_fee_dispute",
-  "priority": "normal"
+  "claimed_category": "cancellation_fee_dispute"
 }
 ```
 
