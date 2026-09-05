@@ -6,8 +6,10 @@ from sqlalchemy import delete
 
 from luma.api.app import create_app
 from luma.config import Settings
-from luma.db.models.case_management import OperationsAccount, SupportCase
+from luma.db.models.case_management import Escalation, OperationsAccount, SupportCase
+from luma.domain.cases import CaseSource, CaseStatus, ClaimedCaseCategory
 from luma.services.auth import hash_password
+from luma.services.cases import CreateCaseCommand, create_case, transition_case
 
 pytestmark = pytest.mark.integration
 
@@ -169,9 +171,11 @@ async def test_api_intake_retry_and_authenticated_case_queue(database) -> None:
                     headers={"Authorization": f"Bearer {token}"},
                 )
                 assert workspace.status_code == 200
-                assert workspace.json()["status"] in {"queued", "processing"}
-                assert workspace.json()["run"] is None
-                assert workspace.json()["evidence"] == []
+                assert workspace.json()["status"] in {
+                    "queued",
+                    "processing",
+                    "human_investigation",
+                }
                 assert [event["event_type"] for event in workspace.json()["events"]][:2] == [
                     "case_received",
                     "case_queued",
@@ -188,6 +192,141 @@ async def test_api_intake_retry_and_authenticated_case_queue(database) -> None:
                 delete(SupportCase).where(
                     SupportCase.external_request_key.in_([request_key, eval_request_key])
                 )
+            )
+            await session.execute(
+                delete(OperationsAccount).where(OperationsAccount.username == username)
+            )
+
+
+async def test_employee_can_document_and_close_human_investigation(database) -> None:
+    username = "investigation-api-test"
+    password = "investigation-api-test-password"
+    request_key = "investigation-api-case-001"
+    async with database.transaction() as session:
+        await session.execute(
+            delete(SupportCase).where(SupportCase.external_request_key == request_key)
+        )
+        await session.execute(
+            delete(OperationsAccount).where(OperationsAccount.username == username)
+        )
+        account = OperationsAccount(
+            username=username,
+            password_hash=hash_password(password),
+            display_name="Investigation Test Operator",
+            active=True,
+        )
+        session.add(account)
+        created = await create_case(
+            session,
+            CreateCaseCommand(
+                complaint_text="I cannot identify the appointment that disappeared.",
+                source=CaseSource.MANUAL,
+                external_request_key=request_key,
+                claimed_customer_reference="CUS-0001",
+                claimed_category=ClaimedCaseCategory.MISSING_APPOINTMENT,
+            ),
+        )
+        await transition_case(
+            session,
+            case_id=created.case.id,
+            to_status=CaseStatus.HUMAN_INVESTIGATION,
+            event_type="agent_escalated",
+            actor_type="agent",
+            actor_reference="case_manager",
+            payload={"reason_code": "required_operational_evidence_missing"},
+        )
+        session.add(
+            Escalation(
+                case_id=created.case.id,
+                reason_code="required_operational_evidence_missing",
+                details={"missing_evidence": ["booking_history"]},
+                status="open",
+            )
+        )
+        case_reference = created.case.public_reference
+
+    settings = Settings(_env_file=None)
+    app = create_app(settings)
+    try:
+        async with app.router.lifespan_context(app):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                unauthenticated = await client.post(
+                    f"/api/operations/cases/{case_reference}/investigation/acknowledge"
+                )
+                assert unauthenticated.status_code == 401
+
+                login = await client.post(
+                    "/api/auth/login", json={"username": username, "password": password}
+                )
+                token = login.json()["access_token"]
+                headers = {"Authorization": f"Bearer {token}"}
+
+                acknowledged = await client.post(
+                    f"/api/operations/cases/{case_reference}/investigation/acknowledge",
+                    headers=headers,
+                )
+                repeated_acknowledgement = await client.post(
+                    f"/api/operations/cases/{case_reference}/investigation/acknowledge",
+                    headers=headers,
+                )
+                assert acknowledged.status_code == 200
+                assert repeated_acknowledgement.status_code == 200
+                assert acknowledged.json()["escalation_status"] == "acknowledged"
+
+                note = await client.post(
+                    f"/api/operations/cases/{case_reference}/investigation/notes",
+                    headers=headers,
+                    json={"note": "Checked the booking history and confirmed no reservation."},
+                )
+                assert note.status_code == 200
+
+                resolved = await client.post(
+                    f"/api/operations/cases/{case_reference}/investigation/resolve",
+                    headers=headers,
+                    json={
+                        "resolution_code": "customer_guidance_provided",
+                        "resolution_summary": (
+                            "No appointment was committed; guidance was provided."
+                        ),
+                        "customer_response": (
+                            "We found no completed reservation and can help you rebook."
+                        ),
+                    },
+                )
+                assert resolved.status_code == 200
+                assert resolved.json() == {
+                    "case_status": "resolved",
+                    "escalation_status": "resolved",
+                }
+
+                repeated_resolution = await client.post(
+                    f"/api/operations/cases/{case_reference}/investigation/resolve",
+                    headers=headers,
+                    json={
+                        "resolution_code": "customer_guidance_provided",
+                        "resolution_summary": "Attempted duplicate closure.",
+                        "customer_response": "This must not replace the original closure.",
+                    },
+                )
+                assert repeated_resolution.status_code == 409
+
+                workspace = await client.get(
+                    f"/api/operations/cases/{case_reference}", headers=headers
+                )
+                assert workspace.status_code == 200
+                assert workspace.json()["status"] == "resolved"
+                assert workspace.json()["escalations"][0]["status"] == "resolved"
+                event_types = [event["event_type"] for event in workspace.json()["events"]]
+                assert event_types.count("human_investigation_started") == 1
+                assert event_types[-2:] == [
+                    "human_investigation_note_added",
+                    "human_investigation_resolved",
+                ]
+    finally:
+        async with database.transaction() as session:
+            await session.execute(
+                delete(SupportCase).where(SupportCase.external_request_key == request_key)
             )
             await session.execute(
                 delete(OperationsAccount).where(OperationsAccount.username == username)

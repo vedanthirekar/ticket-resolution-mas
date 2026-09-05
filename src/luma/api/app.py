@@ -32,6 +32,9 @@ from luma.api.schemas import (
     EscalationResponse,
     EvidenceResponse,
     ExecutionAttemptResponse,
+    InvestigationNoteRequest,
+    InvestigationResolutionRequest,
+    InvestigationUpdateResponse,
     LoginRequest,
     LoginResponse,
     OperationsCaseResponse,
@@ -57,6 +60,12 @@ from luma.services.cases import (
     CreateCaseCommand,
     IdempotencyConflictError,
     create_case,
+)
+from luma.services.investigations import (
+    InvestigationWorkflowError,
+    acknowledge_investigation,
+    add_investigation_note,
+    resolve_investigation,
 )
 from luma.services.operations import (
     get_operations_case_workspace,
@@ -480,6 +489,81 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 for item in workspace.escalations
             ],
             events=[CaseEventResponse.model_validate(item) for item in workspace.events],
+        )
+
+    @app.post(
+        "/api/operations/cases/{case_reference}/investigation/acknowledge",
+        response_model=InvestigationUpdateResponse,
+    )
+    async def acknowledge_operations_investigation(
+        case_reference: str,
+        account: OperationsAccountDependency,
+        session: SessionDependency,
+    ) -> InvestigationUpdateResponse:
+        try:
+            async with session.begin():
+                result = await acknowledge_investigation(
+                    session,
+                    case_reference=case_reference,
+                    account=account,
+                )
+        except InvestigationWorkflowError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        return InvestigationUpdateResponse(
+            case_status=result.case_status,
+            escalation_status=result.escalation_status,
+        )
+
+    @app.post(
+        "/api/operations/cases/{case_reference}/investigation/notes",
+        response_model=InvestigationUpdateResponse,
+    )
+    async def add_operations_investigation_note(
+        case_reference: str,
+        payload: InvestigationNoteRequest,
+        account: OperationsAccountDependency,
+        session: SessionDependency,
+    ) -> InvestigationUpdateResponse:
+        try:
+            async with session.begin():
+                result = await add_investigation_note(
+                    session,
+                    case_reference=case_reference,
+                    account=account,
+                    note=payload.note,
+                )
+        except InvestigationWorkflowError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        return InvestigationUpdateResponse(
+            case_status=result.case_status,
+            escalation_status=result.escalation_status,
+        )
+
+    @app.post(
+        "/api/operations/cases/{case_reference}/investigation/resolve",
+        response_model=InvestigationUpdateResponse,
+    )
+    async def resolve_operations_investigation(
+        case_reference: str,
+        payload: InvestigationResolutionRequest,
+        account: OperationsAccountDependency,
+        session: SessionDependency,
+    ) -> InvestigationUpdateResponse:
+        try:
+            async with session.begin():
+                result = await resolve_investigation(
+                    session,
+                    case_reference=case_reference,
+                    account=account,
+                    resolution_code=payload.resolution_code,
+                    resolution_summary=payload.resolution_summary,
+                    customer_response=payload.customer_response,
+                )
+        except InvestigationWorkflowError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        return InvestigationUpdateResponse(
+            case_status=result.case_status,
+            escalation_status=result.escalation_status,
         )
 
     @app.get("/api/actions/pending", response_model=list[ActionIntentResponse])

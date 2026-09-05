@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApprovalControls } from "@/components/approval-controls";
+import { InvestigationControls } from "@/components/investigation-controls";
 import { RecordValue, recordLabel } from "@/components/record-value";
 import { Label, Status } from "@/components/status";
 import { serverApi } from "@/lib/server-api";
@@ -74,6 +75,9 @@ function eventLabel(eventType: string): string {
     action_approved: "Action approved",
     action_rejected: "Action rejected",
     action_executed: "Action completed",
+    human_investigation_started: "Human investigation started",
+    human_investigation_note_added: "Investigation note added",
+    human_investigation_resolved: "Human investigation completed",
   };
   return labels[eventType] ?? recordLabel(eventType);
 }
@@ -100,6 +104,9 @@ export default async function CasePage({ params }: { params: Promise<{ reference
   const decisionState = item.verification
     ? item.verification.supported ? "Verified" : "Needs human review"
     : "Awaiting verification";
+  const latestEscalation = item.escalations.at(-1);
+  const investigationNotes = item.events.filter((event) => event.event_type === "human_investigation_note_added");
+  const humanResolution = item.events.findLast((event) => event.event_type === "human_investigation_resolved");
 
   return <div className="page case-page">
     <div className="case-title">
@@ -111,6 +118,10 @@ export default async function CasePage({ params }: { params: Promise<{ reference
       {item.proposal || item.verification ? <section className={`panel decision-summary ${item.verification?.supported ? "verified" : item.verification ? "unverified" : ""}`}><div className="section-heading"><div><p className="eyebrow">Recommendation</p><h2>{item.proposal ? recordLabel(item.proposal.outcome) : "Human investigation required"}</h2></div><span className={`decision-state ${item.verification?.supported ? "supported" : "attention"}`}>{decisionState}</span></div>{decisionText && <p>{shortText(decisionText)}</p>}<div className="decision-next"><strong>Next step</strong><span>{pending ? "Review and approve or reject the proposed action below." : item.escalations.length ? "Review the evidence and continue the investigation." : item.status === "resolved" ? "No further action is required." : "Wait for case processing to finish."}</span></div>{item.verification && !item.verification.supported && (item.verification.missing_evidence.length > 0 || item.verification.contradictions.length > 0) && <div className="issue-chips">{item.verification.missing_evidence.map((issue) => <span key={issue}>Missing: {recordLabel(issue)}</span>)}{item.verification.contradictions.map((issue) => <span key={issue}>Conflict: {recordLabel(issue)}</span>)}</div>}</section> : <section className="panel decision-summary"><p className="eyebrow">Recommendation</p><h2>Investigation in progress</h2><p>A recommendation will appear after the evidence and policy checks are complete.</p></section>}
 
       {item.escalations.length > 0 && researchUrl && <section className="research-callout"><div><p className="eyebrow">Human follow-up</p><h2>Need more information?</h2><p>Search the customer’s other appointments, invoices, payments, membership, and booking records.</p></div><Link className="primary-button compact" href={researchUrl}>Open business records →</Link></section>}
+
+      {item.status === "human_investigation" && latestEscalation && <section className="panel investigation-panel"><div className="section-heading"><div><p className="eyebrow">Human investigation</p><h2>{recordLabel(latestEscalation.reason_code)}</h2></div><Status value={latestEscalation.status}/></div><p>Automation stopped safely. Review the records and policies, document what you find, then record a final response.</p>{investigationNotes.length > 0 && <div className="investigation-notes"><strong>Investigation history</strong>{investigationNotes.map((event) => <article key={event.sequence}><p>{String(event.payload.note ?? "")}</p><small>{recordLabel(event.actor_reference)} · {new Date(event.occurred_at).toLocaleString()}</small></article>)}</div>}<InvestigationControls caseReference={item.public_reference} escalationStatus={latestEscalation.status}/></section>}
+
+      {humanResolution && <section className="panel human-resolution"><p className="eyebrow">Human resolution</p><h2>{recordLabel(String(humanResolution.payload.resolution_code ?? "Manual resolution"))}</h2><p>{String(humanResolution.payload.resolution_summary ?? "")}</p><div><strong>Customer response</strong><blockquote>{String(humanResolution.payload.customer_response ?? "")}</blockquote></div><small>Completed by {recordLabel(humanResolution.actor_reference)} · {new Date(humanResolution.occurred_at).toLocaleString()}</small></section>}
 
       <section className="panel detail evidence-section"><div className="section-heading"><div><p className="eyebrow">Supporting records</p><h2>Evidence reviewed</h2></div><span className="section-count">{item.evidence.length}</span></div>{item.evidence.map((evidence, index) => {
         const references = evidenceReferences(evidence);

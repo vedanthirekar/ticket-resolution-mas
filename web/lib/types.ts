@@ -82,6 +82,6 @@ export type CaseWorkspace = CaseRecord & {
   proposal: null | { outcome: string; disposition: string; rationale: string; action_payload: Record<string, unknown> | null; evidence_references: string[]; policy_references: string[] };
   verification: null | { supported: boolean; missing_evidence: string[]; contradictions: string[]; unsupported_claims: string[]; recommended_outcome: string; recommended_disposition: string; requires_human: boolean; rationale: string };
   actions: ActionIntent[];
-  escalations: Array<{ reason_code: string; details: Record<string, unknown>; status: string; created_at: string }>;
+  escalations: Array<{ reason_code: string; details: Record<string, unknown>; status: string; created_at: string; resolved_at?: string | null }>;
   events: Array<{ sequence: number; event_type: string; actor_type: string; actor_reference: string; occurred_at: string; payload: Record<string, unknown> }>;
 };

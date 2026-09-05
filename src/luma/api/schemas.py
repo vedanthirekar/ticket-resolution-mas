@@ -128,6 +128,26 @@ class OperationsResearchResponse(BaseModel):
     data: Any
 
 
+class InvestigationNoteRequest(BaseModel):
+    note: str = Field(min_length=1, max_length=4000)
+
+
+class InvestigationResolutionRequest(BaseModel):
+    resolution_code: Literal[
+        "no_action_required",
+        "customer_guidance_provided",
+        "corrected_externally",
+        "other_manual_resolution",
+    ]
+    resolution_summary: str = Field(min_length=3, max_length=2000)
+    customer_response: str = Field(min_length=3, max_length=4000)
+
+
+class InvestigationUpdateResponse(BaseModel):
+    case_status: str
+    escalation_status: str
+
+
 class ProposalResponse(BaseModel):
     outcome: str
     disposition: str

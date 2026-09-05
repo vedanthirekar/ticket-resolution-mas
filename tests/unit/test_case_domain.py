@@ -8,6 +8,7 @@ def test_case_lifecycle_has_no_customer_wait_state() -> None:
     assert "waiting_for_customer" not in {status.value for status in CaseStatus}
     assert CaseStatus.PROCESSING in ALLOWED_CASE_TRANSITIONS[CaseStatus.QUEUED]
     assert CaseStatus.HUMAN_INVESTIGATION in ALLOWED_CASE_TRANSITIONS[CaseStatus.PROCESSING]
+    assert CaseStatus.RESOLVED in ALLOWED_CASE_TRANSITIONS[CaseStatus.HUMAN_INVESTIGATION]
     assert ALLOWED_CASE_TRANSITIONS[CaseStatus.RESOLVED] == frozenset()
 
 

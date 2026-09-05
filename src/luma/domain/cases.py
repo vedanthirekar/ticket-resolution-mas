@@ -44,9 +44,7 @@ class FailureKind(StrEnum):
     PERMANENT = "permanent"
 
 
-TERMINAL_CASE_STATUSES = frozenset(
-    {CaseStatus.RESOLVED, CaseStatus.HUMAN_INVESTIGATION, CaseStatus.FAILED}
-)
+TERMINAL_CASE_STATUSES = frozenset({CaseStatus.RESOLVED, CaseStatus.FAILED})
 
 ALLOWED_CASE_TRANSITIONS: dict[CaseStatus, frozenset[CaseStatus]] = {
     CaseStatus.RECEIVED: frozenset({CaseStatus.QUEUED, CaseStatus.HUMAN_INVESTIGATION}),
@@ -65,6 +63,6 @@ ALLOWED_CASE_TRANSITIONS: dict[CaseStatus, frozenset[CaseStatus]] = {
         {CaseStatus.RESOLVED, CaseStatus.HUMAN_INVESTIGATION, CaseStatus.FAILED}
     ),
     CaseStatus.RESOLVED: frozenset(),
-    CaseStatus.HUMAN_INVESTIGATION: frozenset(),
+    CaseStatus.HUMAN_INVESTIGATION: frozenset({CaseStatus.RESOLVED}),
     CaseStatus.FAILED: frozenset(),
 }
