@@ -1,0 +1,74 @@
+{
+  "canonical_incidents": {
+    "accepted_provider_transfer": [
+      "APPT-TRANSFER"
+    ],
+    "authorization_hold_record": [
+      "PAY-001494-auth-hold"
+    ],
+    "authorized_not_captured": [
+      "APPT-AUTH-HOLD"
+    ],
+    "conflicting_records": [
+      "APPT-CONFLICT"
+    ],
+    "correct_credit_consumption": [
+      "APPT-MEM-CORRECT"
+    ],
+    "customer_cancellation_windows": [
+      "APPT-CAN-FREE",
+      "APPT-CAN-LATE"
+    ],
+    "duplicate_credit_consumption": [
+      "APPT-MEM-DUP"
+    ],
+    "duplicate_payment": [
+      "APPT-DUP-PAY"
+    ],
+    "duplicate_payment_records": [
+      "PAY-001495-duplicate-a",
+      "PAY-001500-duplicate-b"
+    ],
+    "employee_override": [
+      "BATT-PROVIDER-OVERRIDE"
+    ],
+    "legitimate_similar_payments": [
+      "APPT-DISTINCT-A",
+      "APPT-DISTINCT-B"
+    ],
+    "location_unavailable": [
+      "BATT-LOCATION-CLOSED"
+    ],
+    "missing_audit_evidence": [
+      "APPT-MISSING-EVENT"
+    ],
+    "policy_version_boundary": [
+      "APPT-POLICY-V1",
+      "APPT-POLICY-V2"
+    ],
+    "provider_cancellation_incorrect_fee": [
+      "APPT-CAN-PROVIDER"
+    ],
+    "qualification_unavailable": [
+      "BATT-NO-QUALIFICATION"
+    ],
+    "schedule_unavailable": [
+      "BATT-OUTSIDE-SCHEDULE"
+    ],
+    "technical_booking_failure": [
+      "BATT-TECHNICAL-FAILURE"
+    ],
+    "valid_no_show_fee": [
+      "APPT-NO-SHOW"
+    ]
+  },
+  "dataset_version": "luma_business_v1",
+  "deployment": "build-time only; never packaged with the runtime service",
+  "expected_anomalies": [
+    "missing_cancellation_event",
+    "conflicting_cancellation_initiators",
+    "duplicate_captured_payment",
+    "duplicate_membership_consumption",
+    "provider_fee_was_captured"
+  ]
+}

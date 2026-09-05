@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+htmlcov/
+
+# Virtual environments and package tooling
+.venv/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Generated data and reports
+data_generation/output/
+evals/reports/generated/
+
+# Frontend
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local logs
+*.log

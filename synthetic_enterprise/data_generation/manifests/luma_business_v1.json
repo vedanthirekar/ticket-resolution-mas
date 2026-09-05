@@ -1,0 +1,157 @@
+{
+  "alembic_revision": "20260903_0002",
+  "canonical_record_references": {
+    "accepted_provider_transfer": [
+      "APPT-TRANSFER"
+    ],
+    "authorization_hold_record": [
+      "PAY-001494-auth-hold"
+    ],
+    "authorized_not_captured": [
+      "APPT-AUTH-HOLD"
+    ],
+    "conflicting_records": [
+      "APPT-CONFLICT"
+    ],
+    "correct_credit_consumption": [
+      "APPT-MEM-CORRECT"
+    ],
+    "customer_cancellation_windows": [
+      "APPT-CAN-FREE",
+      "APPT-CAN-LATE"
+    ],
+    "duplicate_credit_consumption": [
+      "APPT-MEM-DUP"
+    ],
+    "duplicate_payment": [
+      "APPT-DUP-PAY"
+    ],
+    "duplicate_payment_records": [
+      "PAY-001495-duplicate-a",
+      "PAY-001500-duplicate-b"
+    ],
+    "employee_override": [
+      "BATT-PROVIDER-OVERRIDE"
+    ],
+    "legitimate_similar_payments": [
+      "APPT-DISTINCT-A",
+      "APPT-DISTINCT-B"
+    ],
+    "location_unavailable": [
+      "BATT-LOCATION-CLOSED"
+    ],
+    "missing_audit_evidence": [
+      "APPT-MISSING-EVENT"
+    ],
+    "policy_version_boundary": [
+      "APPT-POLICY-V1",
+      "APPT-POLICY-V2"
+    ],
+    "provider_cancellation_incorrect_fee": [
+      "APPT-CAN-PROVIDER"
+    ],
+    "qualification_unavailable": [
+      "BATT-NO-QUALIFICATION"
+    ],
+    "schedule_unavailable": [
+      "BATT-OUTSIDE-SCHEDULE"
+    ],
+    "technical_booking_failure": [
+      "BATT-TECHNICAL-FAILURE"
+    ],
+    "valid_no_show_fee": [
+      "APPT-NO-SHOW"
+    ]
+  },
+  "checksum_exclusions": [
+    "created_at",
+    "updated_at",
+    "recorded_at"
+  ],
+  "checksums": {
+    "business.appointment_events": "8585a2614dca8287b556f8ec91af36f6",
+    "business.appointments": "9c9f3e4e9eaaa8646db13664b79c9327",
+    "business.audit_events": "82d1a451e1ba04f503a48c4785c3cea6",
+    "business.booking_attempts": "6376bdfe60949530456d0788f61c8b43",
+    "business.booking_blocks": "7aa99b8d108ea49d0f2a70a4b5c2d981",
+    "business.booking_settings": "9cc2c151b81fc9fc4f370875c068ca8c",
+    "business.customers": "b2434667eff08e5b14b5c0b0e54eefb8",
+    "business.employee_booking_settings": "84a08d388721582216ba3332438b8a7a",
+    "business.employee_locations": "a127e75b42395597838335b75bb84abd",
+    "business.employee_schedules": "567eca8522ed5d3e6f95cde2e4e90060",
+    "business.employee_services": "6cdead5d3d041277b2c65e392d82f91e",
+    "business.employees": "ecce7434af20e316af6558a455fa0118",
+    "business.invoice_items": "960093ab22f0529deb449c3c77f3b8ee",
+    "business.invoices": "dbf9d69312716383dc9d1e21bb6f5341",
+    "business.location_business_hours": "630b324d89a768a5d9df7ad2e1a42ffc",
+    "business.location_resources": "1e40e36a7f1bc6168682d3b0ed28dc6a",
+    "business.location_service_settings": "7a918f7f8e19b1056cd7b303ee9603b4",
+    "business.location_services": "7052099d4fee2148e92b2cabd1ade6c4",
+    "business.locations": "696fab76356845d5ec27de174ed58092",
+    "business.membership_credit_allocations": "25d267a82d2519e7aa7cb29584dd0cd3",
+    "business.membership_ledger": "073346d2ff0194fdd6eae3d0d4632e6b",
+    "business.membership_plans": "614bdcec2a12e5a0969ad6bc946375af",
+    "business.memberships": "286e49cf77d0723268dc09c455a94ce6",
+    "business.payment_events": "e50cab25308090e9f47970e273b5dcdf",
+    "business.payments": "224a331c9f5cff21c219e9c09a062a20",
+    "business.refunds": "aa81ede4deb93ad94f1d7b14d039b6e8",
+    "business.services": "5c1bc1b9597cb02cf2bf2e46ef8e4ec4",
+    "knowledge.policy_documents": "ba71b0597b9b8a74c0ec2cd747e1111a",
+    "knowledge.policy_section_links": "0e4107be8d280e503605b1b2c27a09b5",
+    "knowledge.policy_sections": "fa4702330fa3b4b0269092940e9766e6",
+    "knowledge.policy_versions": "f263df28fd5747457f1a2181709c91d2"
+  },
+  "dataset_fingerprint": "ab2455c33f90a2089dae8f7fb83ba2713395bdc1d62b93db36b29924a281b14e",
+  "dataset_version": "luma_business_v1",
+  "distribution_config": {
+    "appointments": 2000,
+    "background_payments": 1490,
+    "customers": 300,
+    "memberships": 150
+  },
+  "generator_version": "1.0.0",
+  "reference_time": "2026-09-01T12:00:00Z",
+  "row_counts": {
+    "business.appointment_events": 6646,
+    "business.appointments": 2000,
+    "business.audit_events": 120,
+    "business.booking_attempts": 205,
+    "business.booking_blocks": 45,
+    "business.booking_settings": 1,
+    "business.customers": 300,
+    "business.employee_booking_settings": 3,
+    "business.employee_locations": 15,
+    "business.employee_schedules": 9909,
+    "business.employee_services": 86,
+    "business.employees": 15,
+    "business.invoice_items": 1460,
+    "business.invoices": 1460,
+    "business.location_business_hours": 19,
+    "business.location_resources": 6,
+    "business.location_service_settings": 71,
+    "business.location_services": 71,
+    "business.locations": 3,
+    "business.membership_credit_allocations": 53,
+    "business.membership_ledger": 563,
+    "business.membership_plans": 3,
+    "business.memberships": 150,
+    "business.payment_events": 2807,
+    "business.payments": 1461,
+    "business.refunds": 51,
+    "business.services": 25,
+    "knowledge.policy_documents": 5,
+    "knowledge.policy_section_links": 34,
+    "knowledge.policy_sections": 115,
+    "knowledge.policy_versions": 7
+  },
+  "seed": 20260903,
+  "validation_summary": {
+    "checks_passed": 30,
+    "checks_total": 30,
+    "expected_anomalies_total": 5,
+    "expected_anomalies_verified": 5,
+    "failed_checks": [],
+    "missing_expected_anomalies": [],
+    "passed": true
+  }
+}

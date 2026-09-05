@@ -1,0 +1,4 @@
+Alembic migrations for the Luma PostgreSQL database.
+
+M0 installs database-level extensions only. The business and knowledge schemas are
+introduced after the business specification is approved in M1.

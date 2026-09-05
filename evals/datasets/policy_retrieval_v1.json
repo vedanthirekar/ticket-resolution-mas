@@ -1,0 +1,22 @@
+{
+  "dataset_version": "policy_retrieval_v1",
+  "cases": [
+    {"id":"RET-001","query":"provider cancelled and customer was charged a fee; should it be refunded?","effective_on":"2026-08-20","policy_id":"POL-CAN","expected_section_ids":["POL-CAN-v2#4.1"]},
+    {"id":"RET-002","query":"customer gave 48 hours notice for cancellation","effective_on":"2025-06-15","policy_id":"POL-CAN","expected_section_ids":["POL-CAN-v1#3.1"]},
+    {"id":"RET-003","query":"customer cancelled with 24 hours notice","effective_on":"2026-07-15","policy_id":"POL-CAN","expected_section_ids":["POL-CAN-v2#3.1"]},
+    {"id":"RET-004","query":"accepted replacement provider transfer and service was fulfilled","effective_on":"2026-08-01","policy_id":"POL-CAN","expected_section_ids":["POL-CAN-v2#4.2"]},
+    {"id":"RET-005","query":"two successful captures settled the same obligation","effective_on":"2026-07-14","policy_id":"POL-PAY","expected_section_ids":["POL-PAY-v1#3.1"]},
+    {"id":"RET-006","query":"authorization exists but no money was captured","effective_on":"2026-07-14","policy_id":"POL-PAY","expected_section_ids":["POL-PAY-v1#4.1"]},
+    {"id":"RET-007","query":"the payment was already refunded previously","effective_on":"2026-07-14","policy_id":"POL-PAY","expected_section_ids":["POL-PAY-v1#5.2"]},
+    {"id":"RET-008","query":"duplicated membership ledger consumption needs correction","effective_on":"2026-07-21","policy_id":"POL-MEM","expected_section_ids":["POL-MEM-v2#6.2"]},
+    {"id":"RET-009","query":"provider cancellation should restore membership credit","effective_on":"2026-07-21","policy_id":"POL-MEM","expected_section_ids":["POL-MEM-v2#5.1"]},
+    {"id":"RET-010","query":"when do unused membership credits expire?","effective_on":"2026-07-21","policy_id":"POL-MEM","expected_section_ids":["POL-MEM-v2#3.2"]},
+    {"id":"RET-011","query":"provider must be qualified and assigned to the location","effective_on":"2026-09-10","policy_id":"POL-BOOK","expected_section_ids":["POL-BOOK-v1#3.1"]},
+    {"id":"RET-012","query":"requested appointment is outside location opening hours","effective_on":"2026-09-14","policy_id":"POL-BOOK","expected_section_ids":["POL-BOOK-v1#3.2"]},
+    {"id":"RET-013","query":"technical booking failure did not create a reservation","effective_on":"2026-09-15","policy_id":"POL-BOOK","expected_section_ids":["POL-BOOK-v1#5.3"]},
+    {"id":"RET-014","query":"a payment alone does not prove an appointment was booked","effective_on":"2026-06-01","policy_id":"POL-BOOK","expected_section_ids":["POL-BOOK-v1#6.2"]},
+    {"id":"RET-015","query":"refunds and ledger changes require employee approval","effective_on":"2026-08-01","policy_id":"POL-ADJ","expected_section_ids":["POL-ADJ-v1#3.2"]},
+    {"id":"RET-016","query":"retrying an approved action must not create a second refund","effective_on":"2026-08-01","policy_id":"POL-ADJ","expected_section_ids":["POL-ADJ-v1#4.1"]},
+    {"id":"RET-017","query":"missing or contradictory evidence must go to a human","effective_on":"2026-08-01","policy_id":"POL-ADJ","expected_section_ids":["POL-ADJ-v1#5.1"]}
+  ]
+}

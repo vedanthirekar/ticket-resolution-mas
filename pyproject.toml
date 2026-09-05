@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "luma-case-resolution"
+version = "0.1.0"
+description = "Production-minded multi-agent case resolution for a synthetic service business"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "alembic>=1.14,<2",
+    "faker>=30,<40",
+    "fastapi>=0.116,<1",
+    "langchain-core>=1.0,<2",
+    "langchain-google-genai>=4,<5",
+    "langchain-openai>=1.0,<2",
+    "langgraph>=1.0,<2",
+    "langgraph-checkpoint-postgres>=3.0,<4",
+    "pgvector>=0.3,<1",
+    "psycopg[binary,pool]>=3.2,<4",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.7,<3",
+    "sqlalchemy>=2.0.36,<3",
+    "uvicorn>=0.35,<1",
+]
+
+[project.scripts]
+luma-api = "luma.api.__main__:main"
+luma-bootstrap = "luma.bootstrap:main"
+luma-index-policies = "luma.retrieval.__main__:main"
+luma-agent = "luma.agents.__main__:main"
+luma-eval = "luma.evaluation.__main__:main"
+luma-worker = "luma.worker:main"
+luma-simulator = "luma.simulator:main"
+luma-generate-enterprise = "luma_enterprise.__main__:main"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28,<1",
+    "mypy>=1.14,<2",
+    "pytest>=8.3,<9",
+    "pytest-asyncio>=0.25,<2",
+    "ruff>=0.9,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/luma", "synthetic_enterprise/luma_enterprise"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: requires a running PostgreSQL instance and RUN_DB_TESTS=1",
+    "data_integrity: validates generated Luma business data",
+    "live_model: invokes a configured external model API and may incur cost",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["luma"]

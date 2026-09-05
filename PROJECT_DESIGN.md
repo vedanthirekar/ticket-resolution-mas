@@ -21,6 +21,9 @@ This is a living design record, not a claim that every item is already implement
 When a decision changes, update the relevant section and the decision log rather
 than silently replacing the old rationale.
 
+The executable milestone sequence is maintained separately in
+`IMPLEMENTATION_PLAN.md`.
+
 ## 2. Project objective
 
 Build a production-minded **Agentic Case Resolution Engine for Service Businesses**
@@ -123,8 +126,8 @@ if the simpler architecture wins.
   interpretation.
 - Use LangGraph `StateGraph` as the explicit multi-agent workflow orchestrator.
 - Use LangChain selectively for model and tool integrations inside graph nodes,
-  with `langchain-openai` as the OpenAI model adapter. Do not add the OpenAI Agents
-  SDK as a second overlapping orchestration framework.
+  with a provider adapter (`langchain-google-genai` in the current build). Do not
+  add a second overlapping orchestration framework.
 - Use one PostgreSQL database system for operational data, cases, AI artifacts,
   policies and vectors, processing jobs, LangGraph checkpoints, and isolated eval
   truth. Separate PostgreSQL schemas do not represent separate database systems.
@@ -134,7 +137,7 @@ if the simpler architecture wins.
   require it.
 - Adopt the application stack recorded in Section 9.1, including FastAPI, a
   PostgreSQL-backed async worker, Server-Sent Events, Next.js/TypeScript, and
-  LangSmith for engineering traces and experiments.
+  repository-native traces/eval reports. LangSmith export remains optional.
 
 ### Proposed but not yet locked
 
@@ -310,15 +313,15 @@ Simulator behavior:
 
 1. Select a complaint from a prepared ticket pool.
 2. Submit it through `POST /api/cases`.
-3. Wait a random integer from 10 through 20 seconds.
+3. Wait a random interval from 10 through 20 seconds.
 4. Repeat until manually stopped, optionally respecting a case limit.
 
-Proposed commands:
+Implemented commands:
 
 ```powershell
-python -m simulator
-python -m simulator --min-delay 10 --max-delay 20
-python -m simulator --limit 20
+uv run luma-simulator
+uv run luma-simulator --min-interval 10 --max-interval 20
+uv run luma-simulator --count 20
 ```
 
 The simulator:
@@ -422,7 +425,7 @@ Chosen application stack:
 |---|---|
 | Language/runtime | Python 3.12+ |
 | Workflow orchestration | LangGraph `StateGraph` |
-| Agent/model integration | LangChain core plus `langchain-openai` |
+| Agent/model integration | LangChain core plus swappable Gemini/OpenRouter adapters; current default is an OpenRouter `:free` model |
 | Agent contracts | Pydantic v2 structured models |
 | API | FastAPI and Uvicorn |
 | Persistence | PostgreSQL with pgvector |
@@ -430,14 +433,14 @@ Chosen application stack:
 | Migrations | Alembic |
 | Background processing | Python async worker with PostgreSQL job leasing |
 | Live product updates | Server-Sent Events |
-| Operations UI | Next.js, TypeScript, Tailwind CSS, and shadcn/ui |
-| Agent tracing/eval experiments | LangSmith, while repository evals remain authoritative |
+| Operations UI | Next.js, TypeScript, and a source-controlled CSS design system |
+| Agent tracing/eval experiments | Repository reports and structured logs; optional LangSmith export |
 | Tests | pytest and pytest-asyncio |
 | Local environment | Docker Compose and `uv` |
 | Quality tooling | Ruff and Pyright or mypy |
 
-Do not combine LangGraph and the OpenAI Agents SDK as overlapping orchestration
-runtimes. OpenAI remains the model provider through `langchain-openai`.
+Do not combine LangGraph with a second overlapping orchestration runtime. Model
+providers remain replaceable behind the structured-model adapter.
 
 ## 10. Data-first design principle
 
