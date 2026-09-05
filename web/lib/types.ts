@@ -38,6 +38,20 @@ export type PolicySearchResult = {
   rrf_score: number;
 };
 
+export type OperationsResearchResult = {
+  tool_name: string;
+  evidence_type: string;
+  metadata: {
+    tool_call_id: string;
+    tool_name: string;
+    executed_at: string;
+    source_system: string;
+    truncated: boolean;
+    result_count: number;
+  };
+  data: unknown;
+};
+
 export type ActionIntent = {
   public_reference: string;
   case_reference: string;

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from luma.agents.contracts import OperationalToolName
 from luma.domain.cases import CaseSource, ClaimedCaseCategory
 
 
@@ -113,6 +114,18 @@ class PolicySearchResultResponse(BaseModel):
     lexical_rank: int | None
     vector_rank: int | None
     rrf_score: float
+
+
+class OperationsResearchRequest(BaseModel):
+    tool_name: OperationalToolName
+    arguments: dict[str, Any]
+
+
+class OperationsResearchResponse(BaseModel):
+    tool_name: OperationalToolName
+    evidence_type: str
+    metadata: dict[str, Any]
+    data: Any
 
 
 class ProposalResponse(BaseModel):

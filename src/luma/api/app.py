@@ -8,8 +8,10 @@ from datetime import date, timedelta
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from sqlalchemy import func, select
 
+from luma.agents.tool_executor import TOOL_REGISTRY
 from luma.api.dependencies import (
     BearerDependency,
     OperationsAccountDependency,
@@ -35,6 +37,8 @@ from luma.api.schemas import (
     OperationsCaseResponse,
     OperationsCaseWorkspaceResponse,
     OperationsOverviewResponse,
+    OperationsResearchRequest,
+    OperationsResearchResponse,
     PolicyRetrievalResponse,
     PolicySearchResultResponse,
     ProposalResponse,
@@ -60,6 +64,7 @@ from luma.services.operations import (
     operations_overview,
 )
 from luma.tools.contracts import PolicySearchInput
+from luma.tools.errors import EntityNotFoundError, EntityOwnershipError, ToolError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -297,6 +302,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             PolicySearchResultResponse.model_validate(hit.model_dump(mode="python"))
             for hit in result.data
         ]
+
+    @app.post(
+        "/api/operations/research",
+        response_model=OperationsResearchResponse,
+    )
+    async def research_operations_records(
+        payload: OperationsResearchRequest,
+        _: OperationsAccountDependency,
+        session: SessionDependency,
+    ) -> OperationsResearchResponse:
+        """Run the same bounded, read-only operational lookup available to the investigator."""
+
+        request_type, function, evidence_type = TOOL_REGISTRY[payload.tool_name]
+        try:
+            request = request_type.model_validate(payload.arguments)
+            result = await function(session, request)
+        except (EntityNotFoundError, EntityOwnershipError) as error:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        except (ToolError, ValidationError, ValueError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=str(error),
+            ) from error
+        serialized = result.model_dump(mode="json")
+        return OperationsResearchResponse(
+            tool_name=payload.tool_name,
+            evidence_type=evidence_type,
+            metadata=serialized["metadata"],
+            data=serialized["data"],
+        )
 
     @app.get(
         "/api/operations/cases/{case_reference}",

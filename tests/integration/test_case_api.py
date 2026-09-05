@@ -77,7 +77,7 @@ async def test_api_intake_retry_and_authenticated_case_queue(database) -> None:
                     for item in queue.json()
                 )
                 operations_queue = await client.get(
-                    "/api/operations/cases?status=queued",
+                    "/api/operations/cases",
                     headers={"Authorization": f"Bearer {token}"},
                 )
                 assert operations_queue.status_code == 200
@@ -93,6 +93,64 @@ async def test_api_intake_retry_and_authenticated_case_queue(database) -> None:
                 )
                 assert overview.status_code == 200
                 assert overview.json()["total_cases"] >= 1
+
+                research_payload = {
+                    "tool_name": "get_customer",
+                    "arguments": {"customer_reference": "CUS-0001"},
+                }
+                unauthorized_research = await client.post(
+                    "/api/operations/research", json=research_payload
+                )
+                assert unauthorized_research.status_code == 401
+                research = await client.post(
+                    "/api/operations/research",
+                    json=research_payload,
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                assert research.status_code == 200
+                assert research.json()["tool_name"] == "get_customer"
+                assert research.json()["evidence_type"] == "customer_identity"
+                assert research.json()["data"]["customer_reference"] == "CUS-0001"
+                assert research.json()["metadata"]["source_system"] == "luma_postgresql"
+
+                invoice_research = await client.post(
+                    "/api/operations/research",
+                    json={
+                        "tool_name": "get_appointment_payments",
+                        "arguments": {
+                            "customer_reference": "CUS-0007",
+                            "appointment_reference": "APPT-DUP-PAY",
+                        },
+                    },
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                assert invoice_research.status_code == 200
+                assert invoice_research.json()["data"]["appointment_reference"] == "APPT-DUP-PAY"
+                assert len(invoice_research.json()["data"]["payments"]) == 2
+                assert all(
+                    payment["invoice_reference"]
+                    for payment in invoice_research.json()["data"]["payments"]
+                )
+
+                wrong_customer = await client.post(
+                    "/api/operations/research",
+                    json={
+                        "tool_name": "get_appointment_payments",
+                        "arguments": {
+                            "customer_reference": "CUS-0001",
+                            "appointment_reference": "APPT-DUP-PAY",
+                        },
+                    },
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                assert wrong_customer.status_code == 404
+
+                invalid_research = await client.post(
+                    "/api/operations/research",
+                    json={"tool_name": "get_customer", "arguments": {}},
+                    headers={"Authorization": f"Bearer {token}"},
+                )
+                assert invalid_research.status_code == 422
 
                 policy_search = await client.get(
                     "/api/operations/policies/search",
