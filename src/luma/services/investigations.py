@@ -15,6 +15,7 @@ from luma.db.models.case_management import (
 )
 from luma.domain.cases import CaseStatus
 from luma.services.cases import transition_case
+from luma.services.communications import prepare_final_email
 
 
 class InvestigationWorkflowError(ValueError):
@@ -192,7 +193,7 @@ async def resolve_investigation(
         escalation.status = "resolved"
         escalation.resolved_by_account_id = account.id
         escalation.resolved_at = now
-    await transition_case(
+    resolved_case = await transition_case(
         session,
         case_id=support_case.id,
         to_status=CaseStatus.RESOLVED,
@@ -206,6 +207,11 @@ async def resolve_investigation(
             "resolved_escalation_count": len(escalations),
         },
         occurred_at=now,
+    )
+    await prepare_final_email(
+        session,
+        support_case=resolved_case,
+        customer_response=cleaned_response,
     )
     await session.flush()
     return InvestigationUpdate(case_status="resolved", escalation_status="resolved")

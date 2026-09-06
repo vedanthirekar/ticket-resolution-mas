@@ -29,6 +29,8 @@ from luma.api.schemas import (
     CaseEventResponse,
     CaseResponse,
     CaseRunResponse,
+    CustomerCommunicationResponse,
+    CustomerEmailDraftRequest,
     EscalationResponse,
     EvidenceResponse,
     ExecutionAttemptResponse,
@@ -60,6 +62,11 @@ from luma.services.cases import (
     CreateCaseCommand,
     IdempotencyConflictError,
     create_case,
+)
+from luma.services.communications import (
+    CommunicationWorkflowError,
+    mock_send_final_email,
+    update_final_email_draft,
 )
 from luma.services.investigations import (
     InvestigationWorkflowError,
@@ -147,6 +154,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                         source=payload.source,
                         external_request_key=payload.external_request_key,
                         claimed_customer_reference=payload.claimed_customer_reference,
+                        contact_email=payload.contact_email,
                         claimed_category=payload.claimed_category,
                     ),
                 )
@@ -488,8 +496,69 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
                 for item in workspace.escalations
             ],
+            final_communication=(
+                None
+                if workspace.final_communication is None
+                else CustomerCommunicationResponse.model_validate(
+                    workspace.final_communication[0]
+                ).model_copy(update={"sent_by": workspace.final_communication[1]})
+            ),
             events=[CaseEventResponse.model_validate(item) for item in workspace.events],
         )
+
+    @app.put(
+        "/api/operations/cases/{case_reference}/customer-communication/draft",
+        response_model=CustomerCommunicationResponse,
+    )
+    async def update_customer_email_draft(
+        case_reference: str,
+        payload: CustomerEmailDraftRequest,
+        account: OperationsAccountDependency,
+        session: SessionDependency,
+    ) -> CustomerCommunicationResponse:
+        try:
+            async with session.begin():
+                communication = await update_final_email_draft(
+                    session,
+                    case_reference=case_reference,
+                    account=account,
+                    subject=payload.subject,
+                    body=payload.body,
+                )
+                await session.refresh(communication)
+                response = CustomerCommunicationResponse.model_validate(communication).model_copy(
+                    update={"sent_by": None}
+                )
+        except CommunicationWorkflowError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        return response
+
+    @app.post(
+        "/api/operations/cases/{case_reference}/customer-communication/send",
+        response_model=CustomerCommunicationResponse,
+    )
+    async def mock_send_customer_email(
+        case_reference: str,
+        payload: CustomerEmailDraftRequest,
+        account: OperationsAccountDependency,
+        session: SessionDependency,
+    ) -> CustomerCommunicationResponse:
+        try:
+            async with session.begin():
+                communication = await mock_send_final_email(
+                    session,
+                    case_reference=case_reference,
+                    account=account,
+                    subject=payload.subject,
+                    body=payload.body,
+                )
+                await session.refresh(communication)
+                response = CustomerCommunicationResponse.model_validate(communication).model_copy(
+                    update={"sent_by": account.display_name}
+                )
+        except CommunicationWorkflowError as error:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        return response
 
     @app.post(
         "/api/operations/cases/{case_reference}/investigation/acknowledge",

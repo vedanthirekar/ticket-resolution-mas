@@ -223,6 +223,7 @@ async def test_employee_can_document_and_close_human_investigation(database) -> 
                 source=CaseSource.MANUAL,
                 external_request_key=request_key,
                 claimed_customer_reference="CUS-0001",
+                contact_email="Customer.One@Example.com",
                 claimed_category=ClaimedCaseCategory.MISSING_APPOINTMENT,
             ),
         )
@@ -261,6 +262,13 @@ async def test_employee_can_document_and_close_human_investigation(database) -> 
                 )
                 token = login.json()["access_token"]
                 headers = {"Authorization": f"Bearer {token}"}
+
+                premature_send = await client.post(
+                    f"/api/operations/cases/{case_reference}/customer-communication/send",
+                    headers=headers,
+                    json={"subject": "Too early", "body": "This must not be sent."},
+                )
+                assert premature_send.status_code == 409
 
                 acknowledged = await client.post(
                     f"/api/operations/cases/{case_reference}/investigation/acknowledge",
@@ -315,13 +323,64 @@ async def test_employee_can_document_and_close_human_investigation(database) -> 
                     f"/api/operations/cases/{case_reference}", headers=headers
                 )
                 assert workspace.status_code == 200
-                assert workspace.json()["status"] == "resolved"
-                assert workspace.json()["escalations"][0]["status"] == "resolved"
-                event_types = [event["event_type"] for event in workspace.json()["events"]]
+                workspace_payload = workspace.json()
+                assert workspace_payload["status"] == "resolved"
+                assert workspace_payload["contact_email"] == "customer.one@example.com"
+                assert workspace_payload["escalations"][0]["status"] == "resolved"
+                draft = workspace_payload["final_communication"]
+                assert draft["status"] == "prepared"
+                assert draft["recipient_email"] == "customer.one@example.com"
+                assert "We found no completed reservation" in draft["body"]
+
+                edited = {
+                    "subject": f"Your case {case_reference} is complete",
+                    "body": "Hello,\n\nWe found no completed reservation.\n\nLuma Wellness Support",
+                }
+                saved = await client.put(
+                    f"/api/operations/cases/{case_reference}/customer-communication/draft",
+                    headers=headers,
+                    json=edited,
+                )
+                assert saved.status_code == 200
+                assert saved.json()["subject"] == edited["subject"]
+
+                sent = await client.post(
+                    f"/api/operations/cases/{case_reference}/customer-communication/send",
+                    headers=headers,
+                    json=edited,
+                )
+                repeated_send = await client.post(
+                    f"/api/operations/cases/{case_reference}/customer-communication/send",
+                    headers=headers,
+                    json=edited,
+                )
+                assert sent.status_code == 200
+                assert repeated_send.status_code == 200
+                assert sent.json()["status"] == "sent"
+                assert sent.json()["delivery_reference"].startswith("MOCK-EMAIL-")
+
+                edit_after_send = await client.put(
+                    f"/api/operations/cases/{case_reference}/customer-communication/draft",
+                    headers=headers,
+                    json=edited,
+                )
+                assert edit_after_send.status_code == 409
+
+                completed_workspace = await client.get(
+                    f"/api/operations/cases/{case_reference}", headers=headers
+                )
+                completed_payload = completed_workspace.json()
+                assert completed_payload["final_communication"]["sent_by"] == (
+                    "Investigation Test Operator"
+                )
+                event_types = [event["event_type"] for event in completed_payload["events"]]
                 assert event_types.count("human_investigation_started") == 1
-                assert event_types[-2:] == [
-                    "human_investigation_note_added",
+                assert event_types.count("customer_email_mock_sent") == 1
+                assert event_types[-4:] == [
                     "human_investigation_resolved",
+                    "customer_email_draft_prepared",
+                    "customer_email_draft_updated",
+                    "customer_email_mock_sent",
                 ]
     finally:
         async with database.transaction() as session:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from luma.agents.contracts import OperationalToolName
 from luma.domain.cases import CaseSource, ClaimedCaseCategory
@@ -14,7 +14,20 @@ class CaseCreateRequest(BaseModel):
     source: CaseSource = CaseSource.MANUAL
     external_request_key: str = Field(min_length=1, max_length=128)
     claimed_customer_reference: str | None = Field(default=None, max_length=32)
+    contact_email: str | None = Field(default=None, max_length=320)
     claimed_category: ClaimedCaseCategory | None = None
+
+    @field_validator("contact_email")
+    @classmethod
+    def validate_contact_email(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().lower()
+        if not normalized:
+            return None
+        if "@" not in normalized or "." not in normalized.rsplit("@", 1)[-1]:
+            raise ValueError("contact_email must be a valid email address")
+        return normalized
 
 
 class CaseResponse(BaseModel):
@@ -23,6 +36,7 @@ class CaseResponse(BaseModel):
     public_reference: str
     source: str
     claimed_customer_reference: str | None
+    contact_email: str | None
     claimed_category: str | None
     complaint_text: str
     status: str
@@ -148,6 +162,27 @@ class InvestigationUpdateResponse(BaseModel):
     escalation_status: str
 
 
+class CustomerEmailDraftRequest(BaseModel):
+    subject: str = Field(min_length=1, max_length=240)
+    body: str = Field(min_length=1, max_length=10_000)
+
+
+class CustomerCommunicationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    communication_type: str
+    channel: str
+    recipient_email: str
+    subject: str
+    body: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    sent_at: datetime | None
+    delivery_reference: str | None
+    sent_by: str | None = None
+
+
 class ProposalResponse(BaseModel):
     outcome: str
     disposition: str
@@ -218,6 +253,7 @@ class OperationsCaseWorkspaceResponse(CaseResponse):
     verification: VerificationResponse | None
     actions: list[ActionDetailResponse]
     escalations: list[EscalationResponse]
+    final_communication: CustomerCommunicationResponse | None
     events: list[CaseEventResponse]
 
 

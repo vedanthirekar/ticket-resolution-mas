@@ -32,6 +32,7 @@ async def test_case_intake_is_atomic_and_idempotent(database) -> None:
         source=CaseSource.API,
         external_request_key=key,
         claimed_customer_reference="CUS-DOES-NOT-EXIST",
+        contact_email="Customer.Test@Example.com",
     )
     try:
         async with database.transaction() as session:
@@ -43,6 +44,7 @@ async def test_case_intake_is_atomic_and_idempotent(database) -> None:
         assert second.created is False
         assert second.case.id == first.case.id
         assert first.case.customer_id is None
+        assert first.case.contact_email == "customer.test@example.com"
 
         async with database.session() as session:
             event_count = await session.scalar(

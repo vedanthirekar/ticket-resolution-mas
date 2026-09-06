@@ -58,6 +58,7 @@ from luma.services.actions import (
     execute_approved_action,
 )
 from luma.services.cases import transition_case
+from luma.services.communications import prepare_final_email
 from luma.tools.contracts import PolicySearchInput, PolicySectionFetchInput
 
 CATEGORY_POLICY_AREA: dict[CaseCategory, str | None] = {
@@ -750,7 +751,7 @@ class CaseResolutionWorkflow:
                 CaseStatus.PROCESSING.value,
                 CaseStatus.PENDING_APPROVAL.value,
             }:
-                await transition_case(
+                resolved_case = await transition_case(
                     session,
                     case_id=case_id,
                     to_status=CaseStatus.RESOLVED,
@@ -762,6 +763,12 @@ class CaseResolutionWorkflow:
                         "customer_response": response,
                         "execution_receipt": receipt or {},
                     },
+                )
+                await prepare_final_email(
+                    session,
+                    support_case=resolved_case,
+                    customer_response=response,
+                    execution_receipt=receipt,
                 )
             await complete_run(
                 session,

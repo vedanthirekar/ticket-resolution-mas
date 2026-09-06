@@ -83,6 +83,7 @@ class SupportCase(UuidPrimaryKeyMixin, TimestampMixin, Base):
     # cascade into product-owned case history.
     customer_id: Mapped[UUID | None] = mapped_column()
     claimed_customer_reference: Mapped[str | None] = mapped_column(String(32))
+    contact_email: Mapped[str | None] = mapped_column(String(320))
     claimed_category: Mapped[str | None] = mapped_column(String(48))
     complaint_text: Mapped[str] = mapped_column(Text, nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="received")
@@ -256,3 +257,32 @@ class Escalation(UuidPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("case_management.operations_accounts.id")
     )
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CustomerCommunication(UuidPrimaryKeyMixin, TimestampMixin, Base):
+    __tablename__ = "customer_communications"
+    __table_args__ = (
+        CheckConstraint("communication_type = 'final_resolution'", name="valid_type"),
+        CheckConstraint("channel = 'email'", name="valid_channel"),
+        CheckConstraint("status IN ('prepared', 'sent')", name="valid_status"),
+        UniqueConstraint("case_id", "communication_type"),
+        Index("ix_customer_communications_case_status", "case_id", "status"),
+        {"schema": "case_management"},
+    )
+
+    case_id: Mapped[UUID] = mapped_column(
+        ForeignKey("case_management.cases.id", ondelete="CASCADE"), nullable=False
+    )
+    communication_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="final_resolution"
+    )
+    channel: Mapped[str] = mapped_column(String(16), nullable=False, default="email")
+    recipient_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    subject: Mapped[str] = mapped_column(String(240), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="prepared")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sent_by_account_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("case_management.operations_accounts.id")
+    )
+    delivery_reference: Mapped[str | None] = mapped_column(String(64), unique=True)

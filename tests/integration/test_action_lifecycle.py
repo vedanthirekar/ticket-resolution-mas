@@ -14,6 +14,7 @@ from luma.db.models.ai_runtime import CaseRun, VerificationResult
 from luma.db.models.billing import Payment, PaymentEvent, Refund
 from luma.db.models.case_management import (
     ActionIntent,
+    CustomerCommunication,
     ExecutionAttempt,
     OperationsAccount,
     ProcessingJob,
@@ -229,6 +230,7 @@ async def _new_case(database, request_key: str):
                     source=CaseSource.API,
                     external_request_key=request_key,
                     claimed_customer_reference="CUS-0001",
+                    contact_email="workflow-customer@example.com",
                 ),
             )
         ).case
@@ -291,10 +293,16 @@ async def test_approved_refund_resumes_revalidates_and_executes_once(database) -
             .all()
         )
         resolved_case = await session.get(SupportCase, case.id)
+        communication = await session.scalar(
+            select(CustomerCommunication).where(CustomerCommunication.case_id == case.id)
+        )
     assert payment is not None and payment.refunded_amount_cents == 8000
     assert len([refund for refund in refunds if refund.status == "succeeded"]) == 1
     assert len(attempts) == 1
     assert resolved_case is not None and resolved_case.status == "resolved"
+    assert communication is not None and communication.status == "prepared"
+    assert "Refund completed: $80.00" in communication.body
+    assert "REF-" in communication.body
 
 
 async def test_verifier_rejection_escalates_without_action(database) -> None:
@@ -312,9 +320,13 @@ async def test_verifier_rejection_escalates_without_action(database) -> None:
             )
         )
         action = await session.scalar(select(ActionIntent).where(ActionIntent.case_id == case.id))
+        communication = await session.scalar(
+            select(CustomerCommunication).where(CustomerCommunication.case_id == case.id)
+        )
         escalated_case = await session.get(SupportCase, case.id)
     assert verification is not None and not verification.supported
     assert action is None
+    assert communication is None
     assert escalated_case is not None and escalated_case.status == "human_investigation"
 
 

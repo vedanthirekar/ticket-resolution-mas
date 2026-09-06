@@ -2,6 +2,7 @@ export type CaseRecord = {
   public_reference: string;
   source: string;
   claimed_customer_reference: string | null;
+  contact_email: string | null;
   claimed_category: string | null;
   complaint_text: string;
   status: string;
@@ -83,5 +84,18 @@ export type CaseWorkspace = CaseRecord & {
   verification: null | { supported: boolean; missing_evidence: string[]; contradictions: string[]; unsupported_claims: string[]; recommended_outcome: string; recommended_disposition: string; requires_human: boolean; rationale: string };
   actions: ActionIntent[];
   escalations: Array<{ reason_code: string; details: Record<string, unknown>; status: string; created_at: string; resolved_at?: string | null }>;
+  final_communication: null | {
+    communication_type: string;
+    channel: string;
+    recipient_email: string;
+    subject: string;
+    body: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    sent_at: string | null;
+    delivery_reference: string | null;
+    sent_by: string | null;
+  };
   events: Array<{ sequence: number; event_type: string; actor_type: string; actor_reference: string; occurred_at: string; payload: Record<string, unknown> }>;
 };

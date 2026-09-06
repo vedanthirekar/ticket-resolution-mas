@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ApprovalControls } from "@/components/approval-controls";
+import { CustomerEmail } from "@/components/customer-email";
 import { InvestigationControls } from "@/components/investigation-controls";
 import { RecordValue, recordLabel } from "@/components/record-value";
 import { Label, Status } from "@/components/status";
@@ -78,6 +79,9 @@ function eventLabel(eventType: string): string {
     human_investigation_started: "Human investigation started",
     human_investigation_note_added: "Investigation note added",
     human_investigation_resolved: "Human investigation completed",
+    customer_email_draft_prepared: "Customer email draft prepared",
+    customer_email_draft_updated: "Customer email draft updated",
+    customer_email_mock_sent: "Customer email mock sent",
   };
   return labels[eventType] ?? recordLabel(eventType);
 }
@@ -110,7 +114,7 @@ export default async function CasePage({ params }: { params: Promise<{ reference
 
   return <div className="page case-page">
     <div className="case-title">
-      <div><p className="eyebrow">{item.public_reference}</p><h1>{item.plan?.category ? recordLabel(String(item.plan.category)) : "Unclassified case"}</h1><p>{item.claimed_customer_reference ?? "Customer identity not established"} · {new Date(item.received_at).toLocaleString()}</p></div>
+      <div><p className="eyebrow">{item.public_reference}</p><h1>{item.plan?.category ? recordLabel(String(item.plan.category)) : "Unclassified case"}</h1><p>{item.claimed_customer_reference ?? "Customer identity not established"} · {item.contact_email ?? "No contact email"} · {new Date(item.received_at).toLocaleString()}</p></div>
       <div className="case-actions"><Status value={item.status}/>{researchUrl && <Link className="secondary-button" href={researchUrl}>Research customer records</Link>}</div>
     </div>
     <section className="complaint"><p className="eyebrow">Customer complaint</p><blockquote>“{item.complaint_text}”</blockquote></section>
@@ -122,6 +126,9 @@ export default async function CasePage({ params }: { params: Promise<{ reference
       {item.status === "human_investigation" && latestEscalation && <section className="panel investigation-panel"><div className="section-heading"><div><p className="eyebrow">Human investigation</p><h2>{recordLabel(latestEscalation.reason_code)}</h2></div><Status value={latestEscalation.status}/></div><p>Automation stopped safely. Review the records and policies, document what you find, then record a final response.</p>{investigationNotes.length > 0 && <div className="investigation-notes"><strong>Investigation history</strong>{investigationNotes.map((event) => <article key={event.sequence}><p>{String(event.payload.note ?? "")}</p><small>{recordLabel(event.actor_reference)} · {new Date(event.occurred_at).toLocaleString()}</small></article>)}</div>}<InvestigationControls caseReference={item.public_reference} escalationStatus={latestEscalation.status}/></section>}
 
       {humanResolution && <section className="panel human-resolution"><p className="eyebrow">Human resolution</p><h2>{recordLabel(String(humanResolution.payload.resolution_code ?? "Manual resolution"))}</h2><p>{String(humanResolution.payload.resolution_summary ?? "")}</p><div><strong>Customer response</strong><blockquote>{String(humanResolution.payload.customer_response ?? "")}</blockquote></div><small>Completed by {recordLabel(humanResolution.actor_reference)} · {new Date(humanResolution.occurred_at).toLocaleString()}</small></section>}
+
+      {item.final_communication && <CustomerEmail caseReference={item.public_reference} initial={item.final_communication} />}
+      {item.status === "resolved" && !item.final_communication && <section className="panel customer-email unavailable"><p className="eyebrow">Customer notification</p><h2>No email draft available</h2><p>{item.contact_email ? "This older case was resolved before final email drafting was enabled." : "No contact email was supplied when this case was submitted."}</p></section>}
 
       <section className="panel detail evidence-section"><div className="section-heading"><div><p className="eyebrow">Supporting records</p><h2>Evidence reviewed</h2></div><span className="section-count">{item.evidence.length}</span></div>{item.evidence.map((evidence, index) => {
         const references = evidenceReferences(evidence);

@@ -19,6 +19,7 @@ from luma.db.models.case_management import (
     ActionIntent,
     Approval,
     CaseEvent,
+    CustomerCommunication,
     Escalation,
     ExecutionAttempt,
     OperationsAccount,
@@ -56,6 +57,7 @@ class OperationsCaseWorkspace:
     execution_attempts: list[ExecutionAttempt]
     escalations: list[Escalation]
     events: list[CaseEvent]
+    final_communication: tuple[CustomerCommunication, str | None] | None
 
 
 async def operations_overview(session: AsyncSession) -> dict[str, Any]:
@@ -261,6 +263,19 @@ async def get_operations_case_workspace(
             )
         ).all()
     )
+    communication_row = (
+        await session.execute(
+            select(CustomerCommunication, OperationsAccount.display_name)
+            .outerjoin(
+                OperationsAccount,
+                OperationsAccount.id == CustomerCommunication.sent_by_account_id,
+            )
+            .where(
+                CustomerCommunication.case_id == case_record.id,
+                CustomerCommunication.communication_type == "final_resolution",
+            )
+        )
+    ).one_or_none()
     return OperationsCaseWorkspace(
         case=case_record,
         run=run,
@@ -274,4 +289,7 @@ async def get_operations_case_workspace(
         execution_attempts=execution_attempts,
         escalations=escalations,
         events=events,
+        final_communication=(
+            None if communication_row is None else (communication_row[0], communication_row[1])
+        ),
     )

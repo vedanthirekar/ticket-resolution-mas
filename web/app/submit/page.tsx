@@ -27,6 +27,7 @@ export default function SubmitPage() {
       body: JSON.stringify({
         complaint_text: form.get("complaint"),
         claimed_customer_reference: form.get("customer") || null,
+        contact_email: form.get("email"),
         claimed_category: form.get("category"),
         source: "manual",
         external_request_key: `manual-${crypto.randomUUID()}`,
@@ -52,7 +53,7 @@ export default function SubmitPage() {
           <div className="success">
             <span>✓</span><p className="eyebrow">Case received</p>
             <h1>We’re looking into it.</h1>
-            <p>Your reference is <strong>{reference}</strong>. Our resolution team now has your request.</p>
+            <p>Your reference is <strong>{reference}</strong>. Our resolution team now has your request and will prepare a final response for the email you provided.</p>
           </div>
         ) : (
           <>
@@ -61,6 +62,9 @@ export default function SubmitPage() {
             <form onSubmit={submit}>
               <label>Customer reference
                 <input name="customer" placeholder="e.g. CUS-0001" required />
+              </label>
+              <label>Contact email
+                <input name="email" type="email" autoComplete="email" placeholder="you@example.com" maxLength={320} required />
               </label>
               <label>What do you need help with?
                 <select name="category" defaultValue="" required>

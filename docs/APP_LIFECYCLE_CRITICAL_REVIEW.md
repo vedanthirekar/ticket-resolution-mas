@@ -10,11 +10,10 @@ customer-scoped operational tools, policy is retrieved with temporal filters,
 proposals are typed and cited, mutations require approval, and execution is
 revalidated and idempotent.
 
-It is not yet a complete real-world case-resolution product. The most important
-gap is that human investigation is currently a terminal bucket rather than a
-workflow. The second is that the customer receives neither ongoing status nor the
-final resolution. Live-model quality and real business impact also remain
-unproven.
+It is not yet a complete real-world case-resolution product. Human investigation
+now has a documented closure workflow, and resolved cases with a supplied contact
+email now produce an employee-reviewed, mock-delivered final response. Live-model
+quality and real business impact remain unproven.
 
 Indicative maturity assessment:
 
@@ -24,14 +23,14 @@ Indicative maturity assessment:
 | Prototype safety architecture | 8/10 |
 | Automated happy path | 7/10 |
 | Employee operational workflow | 5/10 |
-| Customer end-to-end experience | 3/10 |
+| Customer end-to-end experience | 5/10 |
 | Production readiness | 3/10 |
 
 ## Lifecycle findings
 
 | Stage | What works | Principal gap |
 |---|---|---|
-| Intake | Atomic case and job creation; source idempotency | Claimed customer reference is not authenticated; no attachments or channel integration |
+| Intake | Atomic case and job creation; source idempotency; contact email captured for the simulation | Claimed customer reference and supplied email are not authenticated; no attachments or channel integration |
 | Queue | Durable PostgreSQL lease and retry behavior | No ownership, SLA, age-based prioritization, or dead-letter administration |
 | Investigation | Bounded, narrow, customer-scoped operational tools | Some evidence contracts stop investigation before all decision facts are collected |
 | Policy | Effective/scope filtering and section citations | Supplemental evidence does not currently trigger policy reassessment |
@@ -39,13 +38,13 @@ Indicative maturity assessment:
 | Verification | Deterministic precheck plus independent verifier | Deterministic disposition does not enforce every verifier recommendation field |
 | Approval | Durable decision, rationale, checkpoint resume | One global role; no separation of duties or risk thresholds |
 | Execution | Ownership, stale-state, refundable-balance, and idempotency checks | Executor is a mock external integration |
-| Human investigation | Records and policy can be researched | No acknowledge, notes, manual decision, closure, or customer-response workflow |
-| Customer resolution | Internal response text is generated | Response is generic and is neither delivered nor exposed to the customer |
+| Human investigation | Records and policy can be researched; employees can acknowledge, document, and close escalations | Assignment, SLA, and richer collaboration remain absent |
+| Customer resolution | A final email draft is prepared after genuine resolution, can be edited, and has an auditable mock-send action | Response quality is generic; real delivery and verified customer identity are deferred |
 | Measurement | Basic counts and average resolution time | No handling-time, SLA, override, repeat-contact, quality, or ROI measurements |
 
 ## Highest-priority product gaps
 
-### 1. Complete human investigation
+### 1. Complete human investigation — MVP implemented
 
 Employees need to acknowledge an escalation, record findings, see an actionable
 reason, make a documented manual decision, close the escalation, and leave a
@@ -53,12 +52,15 @@ customer-safe response. Financial mutations must continue through the existing
 approval and deterministic execution boundary rather than gaining a manual
 bypass.
 
-### 2. Complete the customer loop
+### 2. Deliver the final customer response — prototype implemented
 
-Add secure status access, request-for-information communication, delivery of the
-final response, action confirmation, and eventually appeal/reopen behavior. A case
-is not resolved in business terms merely because an internal database status says
-`resolved`.
+The prototype deliberately does not ask customers for supplemental evidence or
+run a conversational follow-up flow. Missing evidence escalates to an employee,
+leaving any customer contact decision with the business. Manual intake captures a
+contact email; after an automatic or human resolution, Luma prepares a deterministic
+email draft from the finalized response and completed action receipt. An employee
+can edit it and record an idempotent mock delivery. Real email delivery, account-
+verified addresses, and appeal/reopen behavior remain future work.
 
 ### 3. Correct policy and verifier control-flow gaps
 
@@ -109,8 +111,8 @@ measurement of the current five-case-family workflow.
 
 ## Recommended implementation order
 
-1. Human-investigation lifecycle
-2. Customer communication and status tracking
+1. Human-investigation lifecycle — MVP complete
+2. Final customer email drafting and mock delivery — prototype complete
 3. Policy/verifier correctness fixes
 4. Grounded customer-resolution writing
 5. Complete approval/execution audit display

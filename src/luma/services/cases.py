@@ -18,6 +18,7 @@ from luma.domain.cases import (
     CaseStatus,
     ClaimedCaseCategory,
 )
+from luma.services.communications import normalize_contact_email
 
 
 class CaseIntakeError(ValueError):
@@ -38,6 +39,7 @@ class CreateCaseCommand:
     source: CaseSource
     external_request_key: str
     claimed_customer_reference: str | None = None
+    contact_email: str | None = None
     claimed_category: ClaimedCaseCategory | None = None
 
 
@@ -47,10 +49,11 @@ class CreateCaseResult:
     created: bool
 
 
-def _fingerprint(command: CreateCaseCommand, complaint_text: str) -> str:
+def _fingerprint(command: CreateCaseCommand, complaint_text: str, contact_email: str | None) -> str:
     canonical = json.dumps(
         {
             "claimed_customer_reference": command.claimed_customer_reference,
+            "contact_email": contact_email,
             "claimed_category": (
                 command.claimed_category.value if command.claimed_category is not None else None
             ),
@@ -78,6 +81,10 @@ async def create_case(session: AsyncSession, command: CreateCaseCommand) -> Crea
         raise CaseIntakeError("external_request_key must not be blank")
     if len(command.external_request_key) > 128:
         raise CaseIntakeError("external_request_key exceeds 128 characters")
+    try:
+        contact_email = normalize_contact_email(command.contact_email)
+    except ValueError as error:
+        raise CaseIntakeError(str(error)) from error
 
     customer_id: UUID | None = None
     if command.claimed_customer_reference:
@@ -89,7 +96,7 @@ async def create_case(session: AsyncSession, command: CreateCaseCommand) -> Crea
 
     case_id = uuid4()
     public_reference = f"CASE-{case_id.hex[:12].upper()}"
-    request_fingerprint = _fingerprint(command, complaint_text)
+    request_fingerprint = _fingerprint(command, complaint_text, contact_email)
     values = {
         "id": case_id,
         "public_reference": public_reference,
@@ -98,6 +105,7 @@ async def create_case(session: AsyncSession, command: CreateCaseCommand) -> Crea
         "request_fingerprint": request_fingerprint,
         "customer_id": customer_id,
         "claimed_customer_reference": command.claimed_customer_reference,
+        "contact_email": contact_email,
         "claimed_category": (
             command.claimed_category.value if command.claimed_category is not None else None
         ),
