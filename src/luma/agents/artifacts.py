@@ -19,7 +19,7 @@ from luma.db.models.ai_runtime import (
 )
 from luma.db.models.case_management import SupportCase
 
-ARCHITECTURE_VERSION = "multi-agent-v2"
+ARCHITECTURE_VERSION = "multi-agent-v3"
 
 
 async def get_or_create_case_run(

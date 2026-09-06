@@ -27,7 +27,7 @@ from luma.agents.contracts import (
     AdjustMembershipCreditAction,
     CaseCategory,
     CaseResolutionState,
-    EvidenceGateOutput,
+    EvidenceCoverageOutput,
     EvidenceRecord,
     InvestigationDecisionOutput,
     InvestigationPlanOutput,
@@ -75,35 +75,30 @@ def _uuid(value: str) -> UUID:
     return UUID(value)
 
 
-def _evidence_gate(
+def _evidence_coverage(
     plan: InvestigationPlanOutput, evidence: list[EvidenceRecord]
-) -> EvidenceGateOutput:
+) -> EvidenceCoverageOutput:
     if plan.category is CaseCategory.UNKNOWN:
-        return EvidenceGateOutput(sufficient=False, reason_code="unsupported_case_category")
+        return EvidenceCoverageOutput(complete=False)
 
-    # Evidence requirements are a product safety contract, not an LLM decision. The
-    # model may explain investigation objectives, but it cannot add irrelevant mandatory
-    # evidence that makes a supported case impossible to resolve.
+    # Coverage is diagnostic context for proposal and verification, not a routing gate.
+    # The model may explain investigation objectives, but it cannot change the canonical
+    # category checklist or make unrelated evidence appear mandatory.
     requirements = set(CATEGORY_REQUIRED_EVIDENCE[plan.category])
     known_types = {record.evidence_type for record in evidence if record.condition == "present"}
     contradictory = sorted(
         {record.evidence_type for record in evidence if record.condition == "contradictory"}
     )
+    unavailable = sorted(
+        {record.evidence_type for record in evidence if record.condition == "unavailable"}
+    )
     missing = sorted(requirements - known_types)
-    if contradictory:
-        return EvidenceGateOutput(
-            sufficient=False,
-            missing_evidence=missing,
-            contradictions=contradictory,
-            reason_code="conflicting_operational_evidence",
-        )
-    if missing:
-        return EvidenceGateOutput(
-            sufficient=False,
-            missing_evidence=missing,
-            reason_code="required_operational_evidence_missing",
-        )
-    return EvidenceGateOutput(sufficient=True)
+    return EvidenceCoverageOutput(
+        complete=not missing and not contradictory and not unavailable,
+        missing_evidence=missing,
+        contradictions=contradictory,
+        unavailable_evidence=unavailable,
+    )
 
 
 def _material_event_date(plan: InvestigationPlanOutput, evidence: list[dict[str, Any]]) -> date:
@@ -186,6 +181,13 @@ def _preverify(state: CaseResolutionState) -> dict[str, Any]:
     if not assessment.applicable:
         failures.append("policy_not_applicable")
     if proposal.action_payload is not None:
+        unreliable_conditions = {
+            item.get("condition")
+            for item in evidence
+            if item.get("condition") in {"contradictory", "unavailable"}
+        }
+        if unreliable_conditions:
+            failures.append("action_evidence_unreliable")
         try:
             if isinstance(proposal.action_payload, RefundPaymentAction):
                 target = proposal.action_payload.payment_reference
@@ -195,10 +197,17 @@ def _preverify(state: CaseResolutionState) -> dict[str, Any]:
                 exact_value = proposal.action_payload.credit_delta
             else:
                 raise ValueError("unsupported action type")
+            matching_records = [
+                item
+                for item in evidence
+                if _contains_value(item, target) and _contains_value(item, exact_value)
+            ]
             if not _contains_value(evidence, target):
                 failures.append("action_target_not_in_evidence")
             if not _contains_value(evidence, exact_value):
                 failures.append("action_value_not_in_evidence")
+            if not matching_records:
+                failures.append("action_target_value_not_bound_in_evidence")
         except (ValidationError, ValueError):
             failures.append("invalid_action_contract")
     return {"passed": not failures, "failure_reasons": failures}
@@ -393,14 +402,10 @@ class CaseResolutionWorkflow:
                     "source_references": record.source_references,
                 }
             )
-            # The model chooses how to gather facts; deterministic code decides when the
-            # declared evidence contract has been fulfilled. Do not spend more calls or
-            # allow a weak model to loop after all required evidence is already present.
-            if _evidence_gate(plan, records).sufficient:
-                break
-
+        coverage = _evidence_coverage(plan, records)
         output = {
             "evidence": [record.model_dump(mode="json") for record in records],
+            "evidence_coverage": coverage.model_dump(mode="json"),
             "investigation_calls": calls,
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
@@ -412,15 +417,6 @@ class CaseResolutionWorkflow:
             return await complete_stage(
                 session, case_run_id=run_id, stage_name="investigation", output=output
             )
-
-    async def evidence_gate_node(self, state: CaseResolutionState) -> dict[str, Any]:
-        plan = InvestigationPlanOutput.model_validate(state["plan"])
-        evidence = [EvidenceRecord.model_validate(item) for item in state.get("evidence", [])]
-        gate = _evidence_gate(plan, evidence)
-        output: dict[str, Any] = {"evidence_gate": gate.model_dump(mode="json")}
-        if not gate.sufficient:
-            output["escalation_reason"] = gate.reason_code
-        return output
 
     async def policy_node(self, state: CaseResolutionState) -> dict[str, Any]:
         run_id = _uuid(state["case_run_id"])
@@ -518,9 +514,7 @@ class CaseResolutionWorkflow:
         assessment = PolicyAssessmentOutput.model_validate(state["policy_assessment"])
         call = assessment.supplemental_call
         if call is None or state.get("supplemental_count", 0) >= 1:
-            output: dict[str, Any] = {
-                "escalation_reason": "supplemental_evidence_limit_or_request_invalid"
-            }
+            output: dict[str, Any] = {}
             records: list[EvidenceRecord] = []
         else:
             async with self.database.session() as session:
@@ -529,9 +523,15 @@ class CaseResolutionWorkflow:
                 )
             records = [record]
             combined = [*state.get("evidence", []), record.model_dump(mode="json")]
-            output = {"evidence": combined, "supplemental_count": 1}
-            if record.condition != "present":
-                output["escalation_reason"] = "required_supplemental_evidence_missing"
+            plan = InvestigationPlanOutput.model_validate(state["plan"])
+            coverage = _evidence_coverage(
+                plan, [EvidenceRecord.model_validate(item) for item in combined]
+            )
+            output = {
+                "evidence": combined,
+                "evidence_coverage": coverage.model_dump(mode="json"),
+                "supplemental_count": 1,
+            }
 
         async with self.database.transaction() as session:
             await persist_evidence(session, case_run_id=run_id, records=records)
@@ -562,6 +562,7 @@ class CaseResolutionWorkflow:
                 "complaint": state["complaint_text"],
                 "plan": state["plan"],
                 "evidence": state.get("evidence", []),
+                "evidence_coverage": state.get("evidence_coverage", {}),
                 "policy_assessment": state["policy_assessment"],
                 "policy_results": state.get("policy_results", []),
                 "allowed_evidence_references": sorted(allowed_evidence),
@@ -638,6 +639,20 @@ class CaseResolutionWorkflow:
     async def disposition_node(self, state: CaseResolutionState) -> dict[str, Any]:
         proposal = ResolutionProposalOutput.model_validate(state["proposal"])
         verification = VerificationOutput.model_validate(state["verification"])
+        raw_coverage = state.get("evidence_coverage")
+        coverage = (
+            EvidenceCoverageOutput.model_validate(raw_coverage)
+            if raw_coverage is not None
+            else _evidence_coverage(
+                InvestigationPlanOutput.model_validate(state["plan"]),
+                [EvidenceRecord.model_validate(item) for item in state.get("evidence", [])],
+            )
+        )
+        if coverage.contradictions:
+            return {
+                "final_disposition": "human_investigation",
+                "escalation_reason": "conflicting_operational_evidence",
+            }
         if not verification.supported or any(
             [
                 verification.missing_evidence,
@@ -652,9 +667,14 @@ class CaseResolutionWorkflow:
         if proposal.action_payload is not None:
             return {"final_disposition": "human_approval"}
         if proposal.disposition == "human_investigation":
+            reason = (
+                "required_operational_evidence_missing"
+                if coverage.missing_evidence or coverage.unavailable_evidence
+                else "case_manager_requested_investigation"
+            )
             return {
                 "final_disposition": "human_investigation",
-                "escalation_reason": "case_manager_requested_investigation",
+                "escalation_reason": reason,
             }
         return {"final_disposition": "auto_resolve"}
 
@@ -838,7 +858,7 @@ class CaseResolutionWorkflow:
         return "escalation" if state.get("escalation_reason") else "investigation"
 
     @staticmethod
-    def _after_gate(state: CaseResolutionState) -> Literal["policy", "escalation"]:
+    def _after_investigation(state: CaseResolutionState) -> Literal["policy", "escalation"]:
         return "escalation" if state.get("escalation_reason") else "policy"
 
     @staticmethod
@@ -848,13 +868,13 @@ class CaseResolutionWorkflow:
         if state.get("escalation_reason"):
             return "escalation"
         assessment = PolicyAssessmentOutput.model_validate(state["policy_assessment"])
-        if assessment.missing_evidence_types:
-            return "supplemental" if assessment.supplemental_call is not None else "escalation"
+        if assessment.missing_evidence_types and assessment.supplemental_call is not None:
+            return "supplemental"
         return "proposal"
 
     @staticmethod
-    def _after_supplemental(state: CaseResolutionState) -> Literal["proposal", "escalation"]:
-        return "escalation" if state.get("escalation_reason") else "proposal"
+    def _after_supplemental(state: CaseResolutionState) -> Literal["proposal"]:
+        return "proposal"
 
     @staticmethod
     def _after_preverification(state: CaseResolutionState) -> Literal["verifier", "escalation"]:
@@ -888,7 +908,6 @@ class CaseResolutionWorkflow:
         graph = StateGraph(CaseResolutionState)
         graph.add_node("plan", self.plan_node)
         graph.add_node("investigation", self.investigation_node)
-        graph.add_node("evidence_gate", self.evidence_gate_node)
         graph.add_node("policy", self.policy_node)
         graph.add_node("supplemental", self.supplemental_node)
         graph.add_node("proposal", self.proposal_node)
@@ -902,8 +921,7 @@ class CaseResolutionWorkflow:
         graph.add_node("escalation", self.escalation_node)
         graph.add_edge(START, "plan")
         graph.add_conditional_edges("plan", self._after_plan)
-        graph.add_edge("investigation", "evidence_gate")
-        graph.add_conditional_edges("evidence_gate", self._after_gate)
+        graph.add_conditional_edges("investigation", self._after_investigation)
         graph.add_conditional_edges("policy", self._after_policy)
         graph.add_conditional_edges("supplemental", self._after_supplemental)
         graph.add_edge("proposal", "preverification")

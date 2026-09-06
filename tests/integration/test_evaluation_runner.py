@@ -131,6 +131,39 @@ async def test_fault_injected_tool_outage_fails_closed_and_is_reported(database)
                     "rationale": "All obtainable evidence has been collected.",
                 },
             ],
+            "policy_assessment": [
+                {
+                    "applicable": True,
+                    "selected_section_ids": ["POL-PAY-v1#3.1"],
+                    "rule_summary": "A confirmed duplicate capture is refundable.",
+                    "missing_evidence_types": ["payment"],
+                    "supplemental_call": None,
+                }
+            ],
+            "resolution_proposal": [
+                {
+                    "outcome": "insufficient_grounding",
+                    "disposition": "human_investigation",
+                    "rationale": (
+                        "The payment source is unavailable, so no safe decision is possible."
+                    ),
+                    "action_payload": None,
+                    "evidence_references": ["APPT-DUP-PAY"],
+                    "policy_references": ["POL-PAY-v1#3.1"],
+                }
+            ],
+            "verification": [
+                {
+                    "supported": True,
+                    "missing_evidence": [],
+                    "contradictions": [],
+                    "unsupported_claims": [],
+                    "recommended_outcome": "insufficient_grounding",
+                    "recommended_disposition": "human_investigation",
+                    "requires_human": True,
+                    "rationale": "The unavailable payment source prevents a safe payment decision.",
+                }
+            ],
         }
     )
     report = await run_live_evaluation(
@@ -162,4 +195,7 @@ async def test_fault_injected_tool_outage_fails_closed_and_is_reported(database)
         "investigation_decision",
         "investigation_decision",
         "investigation_decision",
+        "policy_assessment",
+        "resolution_proposal",
+        "verification",
     ]

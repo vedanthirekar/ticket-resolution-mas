@@ -79,11 +79,11 @@ class EvidenceRecord(StrictModel):
     error: str | None = None
 
 
-class EvidenceGateOutput(StrictModel):
-    sufficient: bool
+class EvidenceCoverageOutput(StrictModel):
+    complete: bool
     missing_evidence: list[str] = Field(default_factory=list)
     contradictions: list[str] = Field(default_factory=list)
-    reason_code: str | None = None
+    unavailable_evidence: list[str] = Field(default_factory=list)
 
 
 class PolicyAssessmentOutput(StrictModel):
@@ -179,7 +179,7 @@ class CaseResolutionState(TypedDict, total=False):
     claimed_category: str | None
     plan: dict[str, Any]
     evidence: list[dict[str, Any]]
-    evidence_gate: dict[str, Any]
+    evidence_coverage: dict[str, Any]
     policy_results: list[dict[str, Any]]
     policy_assessment: dict[str, Any]
     supplemental_count: int

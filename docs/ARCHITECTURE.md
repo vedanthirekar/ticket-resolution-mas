@@ -13,9 +13,9 @@ flowchart LR
     Ops --> DB
     Graph --> Retrieval[Hybrid policy retrieval]
     Retrieval --> DB
-    Graph --> Verify[Verifier + deterministic gates]
+    Graph --> Verify[Verifier + action safety checks]
     Verify -->|safe explanation| Resolved[Resolved]
-    Verify -->|missing/conflicting evidence| Investigate[Human investigation]
+    Verify -->|material gap/conflicting evidence| Investigate[Human investigation]
     Verify -->|write proposed| Approval[Pending approval]
     Approval -->|decision + resume job| Worker
     Worker --> Action[Deterministic action executor]
@@ -43,7 +43,7 @@ sequenceDiagram
         I->>I: Choose one read-only tool from current evidence
         I->>I: Execute and observe provenanced result
     end
-    I-->>M: Complete provenanced evidence set
+    I-->>M: Provenanced evidence + advisory coverage
     M->>K: Category, event date, query, evidence
     K-->>M: Effective policy sections + applicability
     opt Policy identifies one missing evidence type
@@ -52,7 +52,7 @@ sequenceDiagram
         M->>K: Reassess once
         K-->>M: Final policy assessment
     end
-    M->>M: Grounded resolution proposal
+    M->>M: Grounded resolution proposal; assess gap materiality
     M->>V: Complaint + evidence + policy + exact proposal
     V-->>M: Supported, gaps, contradictions, disposition
     alt Human investigation

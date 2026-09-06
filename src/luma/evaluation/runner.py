@@ -25,9 +25,9 @@ from luma.observability.logging import log_event
 from luma.retrieval.embeddings import EmbeddingProvider
 from luma.services.cases import CreateCaseCommand, create_case
 
-PROMPT_VERSION = "prompts-v2"
+PROMPT_VERSION = "prompts-v3"
 TOOL_VERSION = "operational-tools-v1"
-GRAPH_VERSION = "langgraph-v2"
+GRAPH_VERSION = "langgraph-v3"
 EVAL_CASE_MAX_ATTEMPTS = 3
 
 

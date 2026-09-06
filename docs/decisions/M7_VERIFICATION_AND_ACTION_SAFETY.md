@@ -1,6 +1,6 @@
 # M7 Verification and Action Safety
 
-Status: Implemented on September 4, 2026
+Status: Implemented on September 4, 2026; action pre-verification revised September 5, 2026
 
 ## Purpose
 
@@ -50,7 +50,7 @@ creating new authoritative evidence.
 
 | Component | Responsibility | Cannot do |
 |---|---|---|
-| Deterministic pre-verifier | Validate citations, action schema, exact target/value presence, and policy applicability | Interpret business meaning |
+| Deterministic pre-verifier | Validate citations, action schema, policy applicability, reliable action evidence, and target/value binding in one source record | Interpret business meaning |
 | Verifier Agent | Independently challenge semantic support using the complaint, full operational source records, retrieved policy, and proposal | Call tools, repair the proposal, or execute an action |
 | Disposition node | Convert verified state into `auto_resolve`, `human_approval`, or `human_investigation` | Accept model self-confidence as authority |
 | Action-intent service | Bind one exact command to one target, before-state snapshot, stable hash, and idempotency key | Alter a command after approval |
@@ -79,7 +79,8 @@ requires a customer-owned membership reference, non-zero delta, and reason.
 
 ## Fail-closed behavior
 
-- Malformed, unsupported, uncited, cross-customer, or excessive actions escalate.
+- Malformed, unsupported, uncited, cross-customer, excessive, or unreliably evidenced actions
+  escalate.
 - Verifier rejection creates no action intent.
 - Operations rejection creates no execution attempt.
 - A target state change after the approval request marks execution failed and moves

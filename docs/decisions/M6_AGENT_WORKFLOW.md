@@ -1,6 +1,6 @@
 # M6 Multi-Agent Workflow
 
-Status: Implemented on September 4, 2026
+Status: Implemented on September 4, 2026; evidence routing revised September 5, 2026
 
 ## Purpose
 
@@ -25,7 +25,7 @@ Execute tool --> observe provenanced result
         +--- up to 8 calls --+
         |
         v
-Deterministic evidence completeness/conflict gate --fail--> Human investigation
+Advisory evidence coverage (missing/unavailable/contradictory facts)
         |
         v
 Policy Agent: filtered hybrid retrieval + typed assessment
@@ -52,13 +52,14 @@ prevent an expensive or non-terminating debate.
 |---|---|---|
 | Case Manager plan | Confirm/correct the customer category hint, form evidence objectives and policy question | Canonical category/evidence schema; complaint remains untrusted |
 | Investigator | Choose the next tool after observing previous results; stop when evidence is complete | Tool allowlist, customer binding, eight-call cap, discovered-reference enforcement; arbitrary SQL and writes are impossible |
-| Evidence gate | None | Category minimums cannot be weakened; missing or contradictory facts escalate |
+| Evidence coverage | None | Report canonical category gaps without terminating the workflow; contradictions remain visible to final disposition |
 | Policy Agent | Select retrieved rules and identify one rule-required extra fact | Effective date and scope filter before ranking; citations must be retrieved IDs |
 | Case Manager proposal | Synthesize facts and rule into a proposed outcome | Unknown citations are rejected; every mutation must be `human_approval` |
 
-The agent plan may add evidence requirements but cannot remove the deterministic
-minimum for its selected category. Complaint text remains an allegation and never
-satisfies an evidence requirement.
+The agent plan cannot change the canonical diagnostic checklist for its selected category.
+Coverage is passed to proposal and verification so missing facts can be assessed for materiality;
+it is not a routing gate. Complaint text remains an allegation and never satisfies an evidence
+requirement.
 
 ## Model boundary
 
@@ -97,17 +98,17 @@ disables pickle fallback and permits no arbitrary MessagePack modules.
 - Provider retries: 2 by default.
 - Maximum model output: 2,000 tokens per call by default.
 - There is no model-selection router and no verifier debate loop.
-- Identity failure, unsupported category, missing/conflicting required evidence,
-  absent policy, invalid supplemental evidence, and ungrounded citations all fail
-  closed.
+- Identity failure, unsupported category, absent policy, unsafe actions, and ungrounded citations
+  fail closed. Missing or unavailable evidence continues to proposal so its materiality can be
+  assessed. Authoritative contradictions still prevent automatic disposition.
 
 Input/output token counts are captured when the provider returns usage metadata and
 stored on the completed case run. Cost calculation and full tracing belong to M8.
 
 ## Verification evidence
 
-- Unit tests prove fixed category requirements cannot be weakened, an agent plan
-  may extend them, contradictions fail closed, and mutations cannot auto-resolve.
+- Unit tests prove diagnostic category requirements cannot be weakened by a plan, contradictions
+  remain visible, and mutations cannot auto-resolve.
 - PostgreSQL integration tests execute the canonical provider-cancellation case through planning,
   iterative operational calls, hybrid retrieval, policy assessment, and a grounded human-approval
   proposal. A separate regression omits the appointment ID and proves discovery supplies the exact

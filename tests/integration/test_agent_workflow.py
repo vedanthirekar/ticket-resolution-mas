@@ -194,6 +194,7 @@ async def test_happy_path_persists_provenance_and_proposal(database) -> None:
         "investigation_decision",
         "investigation_decision",
         "investigation_decision",
+        "investigation_decision",
         "policy_assessment",
         "resolution_proposal",
         "verification",
@@ -355,7 +356,7 @@ async def test_investigator_discovers_appointment_before_exact_detail_calls(data
     }
     assert "APPT-CAN-PROVIDER" in references
     assert "PAY-001491-provider-fee" in references
-    assert model.calls == ["case_manager_plan", *("investigation_decision" for _ in range(4))]
+    assert model.calls == ["case_manager_plan", *("investigation_decision" for _ in range(5))]
 
 
 async def test_completed_plan_stage_is_not_repeated(database) -> None:
