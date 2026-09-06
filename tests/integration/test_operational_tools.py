@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from luma.agents.contracts import OperationalCall
+from luma.agents.contracts import GetAppointmentTimelineCall
 from luma.agents.tool_executor import execute_operational_call
 from luma.tools.contracts import (
     AppointmentEvidenceInput,
@@ -32,7 +32,7 @@ async def test_executor_injects_trusted_customer_scope_when_model_omits_it(datab
     async with database.session() as session:
         evidence = await execute_operational_call(
             session,
-            OperationalCall(
+            GetAppointmentTimelineCall(
                 tool_name="get_appointment_timeline",
                 arguments={"appointment_reference": "APPT-CAN-PROVIDER"},
                 purpose="Inspect cancellation history.",
@@ -48,7 +48,7 @@ async def test_executor_rejects_model_attempt_to_change_customer_scope(database)
     async with database.session() as session:
         evidence = await execute_operational_call(
             session,
-            OperationalCall(
+            GetAppointmentTimelineCall(
                 tool_name="get_appointment_timeline",
                 arguments={
                     "customer_reference": "CUS-0002",

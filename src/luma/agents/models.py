@@ -5,9 +5,10 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, TypeVar
 
+from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel, SecretStr, ValidationError
 
 from luma.config import Settings
 
@@ -74,7 +75,17 @@ class LangChainStructuredModel:
         ]
         response: Any = None
         for attempt in range(1, self._structured_output_max_attempts + 1):
-            response = await structured.ainvoke(messages)
+            try:
+                response = await structured.ainvoke(messages)
+            except (OutputParserException, ValidationError) as caught_parsing_error:
+                # Some LangChain/provider combinations raise parser failures directly
+                # even with include_raw enabled. Normalize those failures so they get
+                # the same bounded format-correction retry as returned parsing errors.
+                response = {
+                    "parsed": None,
+                    "raw": None,
+                    "parsing_error": caught_parsing_error,
+                }
             if isinstance(response, dict) and response.get("parsed") is not None:
                 break
             if attempt < self._structured_output_max_attempts:
@@ -146,15 +157,36 @@ class ScriptedStructuredModel:
 
 def build_model(settings: Settings) -> StructuredModel:
     """Build the configured live adapter without making an API call."""
-    if settings.model_api_key is None:
-        raise ValueError("LUMA_MODEL_API_KEY is required for live model execution")
+    api_key = (
+        settings.anthropic_api_key or settings.model_api_key
+        if settings.model_provider == "anthropic"
+        else settings.model_api_key
+    )
+    if api_key is None:
+        expected_key = (
+            "ANTHROPIC_API_KEY or LUMA_MODEL_API_KEY"
+            if settings.model_provider == "anthropic"
+            else "LUMA_MODEL_API_KEY"
+        )
+        raise ValueError(f"{expected_key} is required for live model execution")
 
-    if settings.model_provider == "google_genai":
+    if settings.model_provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        model: BaseChatModel = ChatAnthropic(
+            model_name=settings.model_name,
+            api_key=SecretStr(api_key),
+            max_tokens_to_sample=settings.model_max_output_tokens,
+            max_retries=settings.model_max_retries,
+            timeout=settings.model_timeout_seconds,
+            stop=None,
+        )
+    elif settings.model_provider == "google_genai":
         from langchain_google_genai import ChatGoogleGenerativeAI
 
-        model: BaseChatModel = ChatGoogleGenerativeAI(
+        model = ChatGoogleGenerativeAI(
             model=settings.model_name,
-            api_key=SecretStr(settings.model_api_key),
+            api_key=SecretStr(api_key),
             temperature=0,
             max_tokens=settings.model_max_output_tokens,
             max_retries=settings.model_max_retries,
@@ -165,7 +197,7 @@ def build_model(settings: Settings) -> StructuredModel:
 
         model = ChatOpenAI(
             model=settings.model_name,
-            api_key=SecretStr(settings.model_api_key),
+            api_key=SecretStr(api_key),
             base_url=settings.openrouter_base_url,
             temperature=0,
             max_completion_tokens=settings.model_max_output_tokens,
@@ -179,13 +211,18 @@ def build_model(settings: Settings) -> StructuredModel:
         model,
         provider=settings.model_provider,
         model_name=settings.model_name,
-        # OpenRouter models do not consistently honor JSON response formats. Tool/function
-        # calling gives LangChain an enforceable schema and is supported by the selected
-        # MiniMax free model. Keep the provider-native default for Gemini.
+        # Anthropic supports native schema-constrained output. OpenRouter models do not
+        # consistently honor JSON response formats, so use tool/function calling there.
         structured_output_method=(
-            "function_calling" if settings.model_provider == "openrouter" else None
+            "json_schema"
+            if settings.model_provider == "anthropic"
+            else "function_calling"
+            if settings.model_provider == "openrouter"
+            else None
         ),
         structured_output_max_attempts=(
-            settings.model_max_retries + 1 if settings.model_provider == "openrouter" else 1
+            settings.model_max_retries + 1
+            if settings.model_provider in {"anthropic", "openrouter"}
+            else 1
         ),
     )

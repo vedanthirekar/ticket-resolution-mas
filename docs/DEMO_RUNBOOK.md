@@ -16,8 +16,9 @@ npm install
 Set-Location ..
 ```
 
-Set `LUMA_MODEL_API_KEY` in `.env`. Never commit or paste that file into slides or
-terminal recordings.
+The example configuration uses Anthropic. Set `ANTHROPIC_API_KEY` in `.env`; for
+Gemini or OpenRouter, set `LUMA_MODEL_API_KEY` instead. Never commit or paste that
+file into slides or terminal recordings.
 
 ## Start the demo
 

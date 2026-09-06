@@ -7,8 +7,9 @@ from pydantic import ValidationError
 
 from luma.agents.contracts import (
     EvidenceRecord,
+    GetCustomerAppointmentsCall,
+    InvestigationDecisionOutput,
     InvestigationPlanOutput,
-    OperationalCall,
     PolicyAssessmentOutput,
     ResolutionProposalOutput,
 )
@@ -107,7 +108,7 @@ def test_unneeded_policy_supplemental_call_is_discarded() -> None:
         selected_section_ids=["POL-CAN-v2#4.1"],
         rule_summary="Provider cancellation fee is refundable.",
         missing_evidence_types=[],
-        supplemental_call=OperationalCall(
+        supplemental_call=GetCustomerAppointmentsCall(
             tool_name="get_customer_appointments",
             arguments={},
             purpose="Unnecessary extra lookup.",
@@ -115,6 +116,32 @@ def test_unneeded_policy_supplemental_call_is_discarded() -> None:
     )
 
     assert assessment.supplemental_call is None
+
+
+@pytest.mark.parametrize(
+    ("tool_name", "arguments", "missing_field"),
+    [
+        ("get_appointment_timeline", {}, "appointment_reference"),
+        ("get_appointment_payments", {}, "appointment_reference"),
+        ("get_booking_attempt_evidence", {}, "booking_attempt_reference"),
+        ("get_membership_evidence", {}, "as_of"),
+    ],
+)
+def test_exact_detail_calls_require_typed_arguments(
+    tool_name: str, arguments: dict[str, object], missing_field: str
+) -> None:
+    with pytest.raises(ValidationError, match=missing_field):
+        InvestigationDecisionOutput.model_validate(
+            {
+                "complete": False,
+                "next_call": {
+                    "tool_name": tool_name,
+                    "arguments": arguments,
+                    "purpose": "Retrieve exact authoritative evidence.",
+                },
+                "rationale": "The exact record is required.",
+            }
+        )
 
 
 def test_action_target_and_value_must_be_bound_in_one_evidence_record() -> None:

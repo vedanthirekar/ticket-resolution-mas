@@ -113,7 +113,7 @@ async def execute_operational_call(
     expected_customer_reference: str | None,
 ) -> EvidenceRecord:
     request_type, function, evidence_type = TOOL_REGISTRY[call.tool_name]
-    arguments = dict(call.arguments)
+    arguments = call.arguments.model_dump(mode="python", exclude_none=True)
     supplied_customer = arguments.get("customer_reference")
     if expected_customer_reference is None:
         return EvidenceRecord(

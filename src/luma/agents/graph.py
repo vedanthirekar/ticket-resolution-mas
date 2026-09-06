@@ -59,6 +59,7 @@ from luma.services.actions import (
 )
 from luma.services.cases import transition_case
 from luma.services.communications import prepare_final_email
+from luma.services.recommendations import build_customer_resolution_response
 from luma.tools.contracts import PolicySearchInput, PolicySectionFetchInput
 
 CATEGORY_POLICY_AREA: dict[CaseCategory, str | None] = {
@@ -154,8 +155,9 @@ def _call_uses_only_discovered_references(
 ) -> bool:
     """Reject placeholders and invented identifiers at the tool boundary."""
     discovered = {reference for record in evidence for reference in record.source_references}
+    arguments = call.arguments.model_dump(mode="json", exclude_none=True)
     for argument_name in _DISCOVERED_REFERENCE_ARGUMENTS:
-        value = call.arguments.get(argument_name)
+        value = arguments.get(argument_name)
         if value is None:
             continue
         if not isinstance(value, str) or not value.strip():
@@ -376,7 +378,11 @@ class CaseResolutionWorkflow:
             call = decision.next_call
             assert call is not None
             signature = json.dumps(
-                {"tool_name": call.tool_name, "arguments": call.arguments}, sort_keys=True
+                {
+                    "tool_name": call.tool_name,
+                    "arguments": call.arguments.model_dump(mode="json", exclude_none=True),
+                },
+                sort_keys=True,
             )
             if signature in call_signatures:
                 escalation_reason = "repeated_investigation_call"
@@ -747,20 +753,16 @@ class CaseResolutionWorkflow:
         case_id = _uuid(state["case_id"])
         proposal = ResolutionProposalOutput.model_validate(state["proposal"])
         receipt = state.get("execution_receipt")
-        if receipt:
-            if receipt.get("action_type") == "refund_payment":
-                response = f"We approved and completed a refund of {receipt['amount_cents']} cents."
-            else:
-                response = (
-                    "We approved and completed a membership credit adjustment of "
-                    f"{receipt['credit_delta']} credit(s)."
-                )
-        else:
-            response = (
-                "We reviewed your case against the verified account records and the policy "
-                "that applied at the time. No account change was required, and the case is now "
-                "complete."
-            )
+        response = build_customer_resolution_response(
+            outcome=proposal.outcome,
+            evidence=state.get("evidence", []),
+            action_payload=(
+                None
+                if proposal.action_payload is None
+                else proposal.action_payload.model_dump(mode="json")
+            ),
+            execution_receipt=receipt,
+        )
         output = {"customer_response": response}
         async with self.database.transaction() as session:
             cached = await completed_stage_output(session, run_id, "resolution")

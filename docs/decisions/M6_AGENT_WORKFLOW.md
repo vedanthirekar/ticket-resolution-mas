@@ -64,16 +64,16 @@ requirement.
 ## Model boundary
 
 `StructuredModel` is the provider-neutral application interface. Implemented
-adapters support Google Gemini and OpenRouter's OpenAI-compatible endpoint. The
-current default is `minimax/minimax-m3:free`, selected after the previous free provider became
-unreliable under shared-pool throttling. Configuration rejects an OpenRouter model without the
-`:free` suffix. Provider choice remains
+adapters support Anthropic, Google Gemini, and OpenRouter's OpenAI-compatible
+endpoint. The current default is `claude-sonnet-4-6`; configuration rejects an
+OpenRouter model without the `:free` suffix. Provider choice remains
 isolated to the factory, so graph nodes and contracts do not change.
 
 No external model call occurs in the default test suite. `ScriptedStructuredModel`
 provides deterministic, schema-validated responses for trajectory, safety, and
-recovery tests. A live provider run requires `LUMA_MODEL_API_KEY` and remains a
-separate, cost-bearing test/demo action.
+recovery tests. A live provider run requires `ANTHROPIC_API_KEY` for Anthropic or
+`LUMA_MODEL_API_KEY` for Gemini/OpenRouter and remains a separate, cost-bearing
+test/demo action.
 
 ## Durability model
 

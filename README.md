@@ -33,8 +33,8 @@ idempotent refund/membership execution. M8 adds a versioned 60-case dataset,
 deterministic quality/safety graders, fault injection, exportable experiment
 reports, trace metadata, structured logs, and audit queries. An earlier Gemini 3.5
 Flash end-to-end smoke case passed, including transient retry recovery. The runtime
-now also supports OpenRouter and defaults to the structured-output-capable
-`minimax/minimax-m3:free`; configuration rejects paid OpenRouter model IDs. Gate E remains
+supports Anthropic, Gemini, and OpenRouter. The example configuration uses
+`claude-sonnet-4-6`; configuration rejects paid OpenRouter model IDs. Gate E remains
 pending until the complete development and untouched held-out runs finish, and no
 aggregate model-quality numbers are fabricated.
 
@@ -165,7 +165,8 @@ uv run luma-agent --setup-checkpoints
 ```
 
 To run one ingested case with the configured live model adapter, set
-`LUMA_MODEL_API_KEY` and use its public reference:
+`ANTHROPIC_API_KEY` for the default Anthropic provider (or `LUMA_MODEL_API_KEY`
+for Gemini/OpenRouter) and use its public reference:
 
 ```powershell
 uv run luma-agent CASE-XXXXXXXXXXXX
