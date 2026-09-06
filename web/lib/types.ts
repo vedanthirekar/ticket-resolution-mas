@@ -82,6 +82,7 @@ export type CaseWorkspace = CaseRecord & {
   policy_retrievals: Array<{ query_text: string; effective_on: string; selected_section_ids: string[]; ranked_results: Array<Record<string, unknown>> }>;
   proposal: null | { outcome: string; disposition: string; rationale: string; action_payload: Record<string, unknown> | null; evidence_references: string[]; policy_references: string[] };
   verification: null | { supported: boolean; missing_evidence: string[]; contradictions: string[]; unsupported_claims: string[]; recommended_outcome: string; recommended_disposition: string; requires_human: boolean; rationale: string };
+  recommendation: null | { headline: string; explanation: string; key_facts: string[]; next_step: string; technical_rationale: string };
   actions: ActionIntent[];
   escalations: Array<{ reason_code: string; details: Record<string, unknown>; status: string; created_at: string; resolved_at?: string | null }>;
   final_communication: null | {

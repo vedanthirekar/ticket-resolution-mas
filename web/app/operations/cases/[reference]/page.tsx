@@ -58,13 +58,6 @@ function evidenceSummary(evidence: CaseWorkspace["evidence"][number]): string {
   return `${evidenceReferences(evidence).length} source records reviewed`;
 }
 
-function shortText(value: string, limit = 240): string {
-  const text = value.replace(/\s+/g, " ").trim();
-  if (text.length <= limit) return text;
-  const shortened = text.slice(0, limit);
-  return `${shortened.slice(0, shortened.lastIndexOf(" "))}…`;
-}
-
 function eventLabel(eventType: string): string {
   const labels: Record<string, string> = {
     case_received: "Case received",
@@ -102,9 +95,6 @@ export default async function CasePage({ params }: { params: Promise<{ reference
       selectedPolicies.set(sectionId, detail ?? { section_id: sectionId, effective_from: retrieval.effective_on });
     }
   }
-  const decisionText = item.verification && !item.verification.supported
-    ? item.verification.rationale
-    : item.proposal?.rationale;
   const decisionState = item.verification
     ? item.verification.supported ? "Verified" : "Needs human review"
     : "Awaiting verification";
@@ -119,7 +109,7 @@ export default async function CasePage({ params }: { params: Promise<{ reference
     </div>
     <section className="complaint"><p className="eyebrow">Customer complaint</p><blockquote>“{item.complaint_text}”</blockquote></section>
     <div className="workspace-grid"><div className="workspace-main">
-      {item.proposal || item.verification ? <section className={`panel decision-summary ${item.verification?.supported ? "verified" : item.verification ? "unverified" : ""}`}><div className="section-heading"><div><p className="eyebrow">Recommendation</p><h2>{item.proposal ? recordLabel(item.proposal.outcome) : "Human investigation required"}</h2></div><span className={`decision-state ${item.verification?.supported ? "supported" : "attention"}`}>{decisionState}</span></div>{decisionText && <p>{shortText(decisionText)}</p>}<div className="decision-next"><strong>Next step</strong><span>{pending ? "Review and approve or reject the proposed action below." : item.escalations.length ? "Review the evidence and continue the investigation." : item.status === "resolved" ? "No further action is required." : "Wait for case processing to finish."}</span></div>{item.verification && !item.verification.supported && (item.verification.missing_evidence.length > 0 || item.verification.contradictions.length > 0) && <div className="issue-chips">{item.verification.missing_evidence.map((issue) => <span key={issue}>Missing: {recordLabel(issue)}</span>)}{item.verification.contradictions.map((issue) => <span key={issue}>Conflict: {recordLabel(issue)}</span>)}</div>}</section> : <section className="panel decision-summary"><p className="eyebrow">Recommendation</p><h2>Investigation in progress</h2><p>A recommendation will appear after the evidence and policy checks are complete.</p></section>}
+      {item.recommendation ? <section className={`panel decision-summary ${item.verification?.supported ? "verified" : item.verification ? "unverified" : ""}`}><div className="section-heading"><div><p className="eyebrow">Recommendation</p><h2>{item.recommendation.headline}</h2></div><span className={`decision-state ${item.verification?.supported ? "supported" : "attention"}`}>{decisionState}</span></div><p>{item.recommendation.explanation}</p>{item.recommendation.key_facts.length > 0 && <ul className="decision-facts">{item.recommendation.key_facts.map((fact) => <li key={fact}>{fact}</li>)}</ul>}<div className="decision-next"><strong>Next step</strong><span>{item.recommendation.next_step}</span></div><details className="decision-details"><summary>View decision details</summary><p>{item.recommendation.technical_rationale}</p>{item.proposal && <div className="decision-references"><span>Evidence: {item.proposal.evidence_references.join(", ") || "None"}</span><span>Policy: {item.proposal.policy_references.join(", ") || "None"}</span></div>}</details>{item.verification && !item.verification.supported && (item.verification.missing_evidence.length > 0 || item.verification.contradictions.length > 0) && <div className="issue-chips">{item.verification.missing_evidence.map((issue) => <span key={issue}>Missing: {recordLabel(issue)}</span>)}{item.verification.contradictions.map((issue) => <span key={issue}>Conflict: {recordLabel(issue)}</span>)}</div>}</section> : <section className="panel decision-summary"><p className="eyebrow">Recommendation</p><h2>Investigation in progress</h2><p>A recommendation will appear after the evidence and policy checks are complete.</p></section>}
 
       {item.escalations.length > 0 && researchUrl && <section className="research-callout"><div><p className="eyebrow">Human follow-up</p><h2>Need more information?</h2><p>Search the customer’s other appointments, invoices, payments, membership, and booking records.</p></div><Link className="primary-button compact" href={researchUrl}>Open business records →</Link></section>}
 

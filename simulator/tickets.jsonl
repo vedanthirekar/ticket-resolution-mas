@@ -1,5 +1,5 @@
 {"scenario":"provider_cancellation_fee","customer_reference":"CUS-0001","claimed_category":"cancellation_fee_dispute","complaint":"My provider cancelled my August 20, 2026 appointment, but I still see an $80 cancellation charge."}
-{"scenario":"late_customer_cancellation","customer_reference":"CUS-0004","claimed_category":"cancellation_fee_dispute","complaint":"Could you review the $60 fee from the appointment I cancelled on July 11, 2026?"}
+{"scenario":"late_customer_cancellation","customer_reference":"CUS-0004","claimed_category":"cancellation_fee_dispute","complaint":"`Could you review the $60 fee from the appointment I cancelled on July 11, 2026`?"}
 {"scenario":"valid_no_show_fee","customer_reference":"CUS-0005","claimed_category":"cancellation_fee_dispute","complaint":"I was charged after missing my July 12, 2026 appointment. Can you explain whether that fee is valid?"}
 {"scenario":"duplicate_capture","customer_reference":"CUS-0007","claimed_category":"duplicate_payment","complaint":"I have two $120 card charges for the same July 14, 2026 visit. I think I paid twice."}
 {"scenario":"distinct_equal_charges","customer_reference":"CUS-0008","claimed_category":"duplicate_payment","complaint":"Two identical $120 charges appeared after my visits on July 15 and July 16, 2026. Are they duplicates?"}

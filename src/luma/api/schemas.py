@@ -243,6 +243,14 @@ class EscalationResponse(BaseModel):
     resolved_at: datetime | None
 
 
+class RecommendationPresentationResponse(BaseModel):
+    headline: str
+    explanation: str
+    key_facts: list[str]
+    next_step: str
+    technical_rationale: str
+
+
 class OperationsCaseWorkspaceResponse(CaseResponse):
     run: CaseRunResponse | None
     plan: dict[str, object] | None
@@ -251,6 +259,7 @@ class OperationsCaseWorkspaceResponse(CaseResponse):
     policy_retrievals: list[PolicyRetrievalResponse]
     proposal: ProposalResponse | None
     verification: VerificationResponse | None
+    recommendation: RecommendationPresentationResponse | None
     actions: list[ActionDetailResponse]
     escalations: list[EscalationResponse]
     final_communication: CustomerCommunicationResponse | None

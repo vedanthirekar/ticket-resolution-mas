@@ -47,6 +47,7 @@ from luma.api.schemas import (
     PolicyRetrievalResponse,
     PolicySearchResultResponse,
     ProposalResponse,
+    RecommendationPresentationResponse,
     VerificationResponse,
     WorkflowStageResponse,
 )
@@ -79,6 +80,7 @@ from luma.services.operations import (
     list_operations_cases,
     operations_overview,
 )
+from luma.services.recommendations import build_recommendation_presentation
 from luma.tools.contracts import PolicySearchInput
 from luma.tools.errors import EntityNotFoundError, EntityOwnershipError, ToolError
 
@@ -407,6 +409,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         run = workspace.run
         proposal = workspace.proposal
         verification = workspace.verification
+        pending_action = next((item for item in actions if item.status == "pending_approval"), None)
+        if pending_action is not None:
+            recommendation_next_step = "Review and approve or reject the proposed action below."
+        elif workspace.escalations:
+            recommendation_next_step = "Review the evidence and continue the investigation."
+        elif workspace.case.status == "resolved":
+            recommendation_next_step = "No further action is required."
+        else:
+            recommendation_next_step = "Wait for case processing to finish."
+        evidence_payload = [
+            {
+                "evidence_type": item.evidence_type,
+                "condition": item.condition,
+                "content": item.content,
+            }
+            for item in workspace.evidence
+        ]
         return OperationsCaseWorkspaceResponse(
             **CaseResponse.model_validate(workspace.case).model_dump(),
             run=(
@@ -483,6 +502,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     recommended_disposition=verification.recommended_disposition,
                     requires_human=verification.requires_human,
                     rationale=verification.rationale,
+                )
+            ),
+            recommendation=(
+                None
+                if proposal is None
+                else RecommendationPresentationResponse.model_validate(
+                    build_recommendation_presentation(
+                        outcome=proposal.outcome,
+                        supported=None if verification is None else verification.supported,
+                        evidence=evidence_payload,
+                        action_payload=proposal.action_payload,
+                        proposal_rationale=proposal.rationale,
+                        verification_rationale=(
+                            None if verification is None else verification.rationale
+                        ),
+                        next_step=recommendation_next_step,
+                    )
                 )
             ),
             actions=actions,
