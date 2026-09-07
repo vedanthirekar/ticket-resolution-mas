@@ -100,6 +100,37 @@ docker compose up -d postgres
 uv run alembic upgrade head
 ```
 
+### Run the full stack with Docker
+
+Copy `.env.example` to `.env` and add the model-provider credentials required for
+your chosen provider. Then build the application images and perform the one-time
+demo database setup:
+
+```powershell
+docker compose build
+docker compose run --rm setup
+```
+
+Start PostgreSQL, the API, the background worker, and the web application:
+
+```powershell
+docker compose up -d
+```
+
+Open `http://localhost:3000`. To inspect or stop the stack:
+
+```powershell
+docker compose ps
+docker compose logs -f api worker web
+docker compose down
+```
+
+The `setup` service generates the initial demo dataset as well as applying migrations,
+indexing policies, bootstrapping the operations account, and preparing LangGraph
+checkpoint tables. Run it only for initial setup of a fresh database. Routine restarts
+only require `docker compose up -d`. The PostgreSQL data remains in the
+`luma_postgres_data` named volume after `docker compose down`.
+
 Generate and independently validate the frozen synthetic dataset:
 
 ```powershell
