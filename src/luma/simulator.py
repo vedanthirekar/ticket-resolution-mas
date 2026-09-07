@@ -18,6 +18,7 @@ class SimulatedTicket:
     customer_reference: str
     claimed_category: str
     complaint: str
+    contact_email: str = "simulated.customer@example.test"
 
 
 def load_tickets(path: Path) -> list[SimulatedTicket]:
@@ -42,6 +43,7 @@ def submit_ticket(api_url: str, ticket: SimulatedTicket) -> dict[str, Any]:
             "source": "simulator",
             "external_request_key": f"sim-{ticket.scenario}-{uuid4().hex}",
             "claimed_customer_reference": ticket.customer_reference,
+            "contact_email": ticket.contact_email,
             "claimed_category": ticket.claimed_category,
         }
     ).encode()
