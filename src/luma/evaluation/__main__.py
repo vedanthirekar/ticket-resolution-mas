@@ -16,6 +16,8 @@ from luma.runtime import run_async
 async def _run(args: argparse.Namespace) -> None:
     dataset = load_dataset(args.dataset)
     selected = [case for case in dataset.cases if args.split == "all" or case.split == args.split]
+    if args.offset:
+        selected = selected[args.offset :]
     if args.limit is not None:
         selected = selected[: args.limit]
     if not args.live:
@@ -48,6 +50,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Validate or run the Luma evaluation dataset")
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET_PATH)
     parser.add_argument("--split", choices=("all", "development", "held_out"), default="all")
+    parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--limit", type=int)
     parser.add_argument(
         "--live", action="store_true", help="invoke the configured model (may cost money)"
