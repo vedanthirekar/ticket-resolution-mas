@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import delete, func, select
 
-from luma.db.models.case_management import CaseEvent, ProcessingJob, SupportCase
+from luma.db.models.case_management import CaseEvent, Escalation, ProcessingJob, SupportCase
 from luma.domain.cases import CaseSource, FailureKind, JobStatus
 from luma.services.cases import (
     CreateCaseCommand,
@@ -154,7 +154,59 @@ async def test_permanent_job_failure_dead_letters_and_escalates(database) -> Non
         async with database.session() as session:
             case_record = await session.get(SupportCase, created.case.id)
             job = await session.get(ProcessingJob, claimed.id)
+            escalation = await session.scalar(
+                select(Escalation).where(Escalation.case_id == created.case.id)
+            )
         assert case_record is not None and case_record.status == "human_investigation"
         assert job is not None and job.status == "dead_letter"
+        assert escalation is not None
+        assert escalation.reason_code == "processing_failed_permanent"
+        assert escalation.details["failure_kind"] == "permanent"
+    finally:
+        await _delete_test_cases(database, key)
+
+
+async def test_transient_job_failure_uses_exhausted_reason_after_final_attempt(database) -> None:
+    key = "runtime-transient-exhausted-001"
+    await _delete_test_cases(database, key)
+    now = datetime.now(UTC) + timedelta(seconds=1)
+    try:
+        async with database.transaction() as session:
+            created = await create_case(
+                session,
+                CreateCaseCommand(
+                    complaint_text="The provider temporarily failed repeatedly.",
+                    source=CaseSource.API,
+                    external_request_key=key,
+                ),
+            )
+
+        for attempt in range(1, 4):
+            claim_time = now + timedelta(minutes=attempt)
+            async with database.transaction() as session:
+                claimed = await claim_next_job(session, worker_id="worker-a", now=claim_time)
+            assert claimed is not None and claimed.attempt_count == attempt
+
+            async with database.transaction() as session:
+                result = await fail_job(
+                    session,
+                    job_id=claimed.id,
+                    worker_id="worker-a",
+                    failure_kind=FailureKind.TRANSIENT,
+                    error_code="provider_unavailable",
+                    error_detail="test transient failure",
+                    now=claim_time + timedelta(seconds=1),
+                )
+            expected = JobStatus.RETRY_WAIT if attempt < 3 else JobStatus.DEAD_LETTER
+            assert result is expected
+
+        async with database.session() as session:
+            escalation = await session.scalar(
+                select(Escalation).where(Escalation.case_id == created.case.id)
+            )
+        assert escalation is not None
+        assert escalation.reason_code == "processing_exhausted"
+        assert escalation.details["attempt_count"] == 3
+        assert escalation.details["failure_kind"] == "transient"
     finally:
         await _delete_test_cases(database, key)

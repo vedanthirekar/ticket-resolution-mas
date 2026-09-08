@@ -36,6 +36,10 @@ class StructuredModel(Protocol):
     ) -> ModelInvocation[OutputT]: ...
 
 
+class StructuredOutputError(RuntimeError):
+    """The provider did not return valid structured output after bounded retries."""
+
+
 class LangChainStructuredModel:
     """Provider-neutral adapter around a LangChain chat model."""
 
@@ -69,12 +73,20 @@ class LangChainStructuredModel:
         if self._structured_output_method is not None:
             structured_output_options["method"] = self._structured_output_method
         structured = self._model.with_structured_output(schema, **structured_output_options)
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=json.dumps(payload, sort_keys=True, default=str)),
-        ]
+        serialized_payload = json.dumps(payload, sort_keys=True, default=str)
+        correction: str | None = None
         response: Any = None
         for attempt in range(1, self._structured_output_max_attempts + 1):
+            # Start every attempt as a fresh two-message request. In particular, do
+            # not append a later SystemMessage: Anthropic extracts system messages
+            # into one top-level prompt and rejects non-consecutive system messages.
+            attempt_system_prompt = system_prompt
+            if correction is not None:
+                attempt_system_prompt = f"{system_prompt}\n\n{correction}"
+            messages = [
+                SystemMessage(content=attempt_system_prompt),
+                HumanMessage(content=serialized_payload),
+            ]
             try:
                 response = await structured.ainvoke(messages)
             except (OutputParserException, ValidationError) as caught_parsing_error:
@@ -97,15 +109,11 @@ class LangChainStructuredModel:
                     if parsing_error is not None
                     else "The required schema function was not called."
                 )
-                messages.append(
-                    SystemMessage(
-                        content=(
-                            f"FORMAT CORRECTION (attempt {attempt + 1}): Call the required "
-                            f"{schema.__name__} schema function with corrected arguments. "
-                            "Do not return prose. The previous response failed for this reason:\n"
-                            f"{validation_feedback}"
-                        )
-                    )
+                correction = (
+                    f"FORMAT CORRECTION (attempt {attempt + 1}): Call the required "
+                    f"{schema.__name__} schema function with corrected arguments. "
+                    "Do not return prose. The previous response failed for this reason:\n"
+                    f"{validation_feedback}"
                 )
         if not isinstance(response, dict) or response.get("parsed") is None:
             parsing_error = response.get("parsing_error") if isinstance(response, dict) else None
@@ -113,7 +121,7 @@ class LangChainStructuredModel:
                 type(parsing_error).__name__ if parsing_error is not None else "missing_call"
             )
             error_detail = str(parsing_error)[:1500] if parsing_error is not None else ""
-            raise ValueError(
+            raise StructuredOutputError(
                 "model returned no valid structured output after "
                 f"{self._structured_output_max_attempts} attempts ({error_kind}): {error_detail}"
             )
@@ -221,7 +229,7 @@ def build_model(settings: Settings) -> StructuredModel:
             else None
         ),
         structured_output_max_attempts=(
-            settings.model_max_retries + 1
+            settings.model_structured_output_max_attempts
             if settings.model_provider in {"anthropic", "openrouter"}
             else 1
         ),

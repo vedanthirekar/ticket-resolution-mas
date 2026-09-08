@@ -13,7 +13,7 @@ from sqlalchemy import select
 
 from luma.agents.checkpoints import postgres_checkpointer
 from luma.agents.graph import CaseResolutionWorkflow
-from luma.agents.models import build_model
+from luma.agents.models import StructuredOutputError, build_model
 from luma.agents.runner import run_case
 from luma.config import Settings, get_settings
 from luma.db.models.case_management import SupportCase
@@ -26,7 +26,7 @@ from luma.services.jobs import claim_next_job, complete_job, fail_job
 
 
 def _failure_kind(error: Exception) -> FailureKind:
-    if isinstance(error, (TimeoutError, ConnectionError)):
+    if isinstance(error, (TimeoutError, ConnectionError, StructuredOutputError)):
         return FailureKind.TRANSIENT
     message = str(error).lower()
     transient_markers = ("429", "503", "quota", "rate limit", "timeout", "temporarily unavailable")

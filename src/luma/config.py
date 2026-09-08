@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     model_timeout_seconds: float = Field(default=30, gt=0, le=120)
     model_stage_timeout_seconds: float = Field(default=180, gt=0, le=600)
     model_max_retries: int = Field(default=2, ge=0, le=5)
+    model_structured_output_max_attempts: int = Field(default=3, ge=1, le=6)
     model_max_output_tokens: int = Field(default=2000, ge=128, le=16000)
     model_input_cost_per_million_usd: float | None = Field(default=None, ge=0)
     model_output_cost_per_million_usd: float | None = Field(default=None, ge=0)
