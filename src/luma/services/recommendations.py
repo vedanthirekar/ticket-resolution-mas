@@ -217,7 +217,7 @@ def _timeline_facts(timeline_data: dict[str, Any]) -> tuple[str | None, str | No
             event
             for event in events
             if isinstance(event, dict)
-            and event.get("event_type") in {"appointment_cancelled", "appointment_no_show"}
+            and event.get("event_type") in {"appointment_cancelled", "appointment_marked_no_show"}
         ),
         None,
     )

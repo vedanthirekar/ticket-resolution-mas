@@ -96,7 +96,8 @@ def _detect_condition(evidence_type: str, content: dict[str, Any]) -> str:
                 event.get("initiating_party")
                 for event in events
                 if isinstance(event, dict)
-                and event.get("event_type") in {"appointment_cancelled", "appointment_no_show"}
+                and event.get("event_type")
+                in {"appointment_cancelled", "appointment_marked_no_show"}
             }
             terminal_events.discard(None)
             if not terminal_events:

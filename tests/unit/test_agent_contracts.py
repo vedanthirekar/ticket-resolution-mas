@@ -14,6 +14,7 @@ from luma.agents.contracts import (
     ResolutionProposalOutput,
 )
 from luma.agents.graph import _evidence_coverage, _material_event_date, _preverify
+from luma.agents.tool_executor import _detect_condition
 
 
 def _plan(**overrides):
@@ -83,6 +84,34 @@ def test_contradiction_is_reported_in_coverage() -> None:
 
     assert coverage.complete is False
     assert coverage.contradictions == ["appointment_timeline"]
+
+
+def test_no_show_timeline_accepts_the_canonical_terminal_event() -> None:
+    condition = _detect_condition(
+        "appointment_timeline",
+        {
+            "data": {
+                "appointment": {"status": "no_show"},
+                "events": [
+                    {
+                        "event_type": "appointment_marked_no_show",
+                        "initiating_party": "customer",
+                    }
+                ],
+            }
+        },
+    )
+
+    assert condition == "present"
+
+
+def test_no_show_timeline_without_terminal_event_is_missing() -> None:
+    condition = _detect_condition(
+        "appointment_timeline",
+        {"data": {"appointment": {"status": "no_show"}, "events": []}},
+    )
+
+    assert condition == "missing"
 
 
 def test_mutation_cannot_be_marked_auto_resolve() -> None:

@@ -73,6 +73,43 @@ def test_late_cancellation_customer_response_answers_the_fee_question() -> None:
     assert "No account change was required" not in response
 
 
+def test_no_show_recommendation_uses_the_canonical_terminal_event() -> None:
+    result = build_recommendation_presentation(
+        outcome="retain_no_show_fee",
+        supported=True,
+        evidence=[
+            {
+                "evidence_type": "appointment_timeline",
+                "condition": "present",
+                "content": {
+                    "data": {
+                        "appointment": {"scheduled_start": "2026-07-12T17:00:00Z"},
+                        "events": [
+                            {
+                                "event_type": "appointment_marked_no_show",
+                                "initiating_party": "customer",
+                                "occurred_at": "2026-07-12T17:15:00Z",
+                            }
+                        ],
+                    }
+                },
+            },
+            {
+                "evidence_type": "payment",
+                "condition": "present",
+                "content": {"data": {"payments": [{"captured_amount_cents": 12000}]}},
+            },
+        ],
+        action_payload=None,
+        proposal_rationale="The no-show fee is valid.",
+        verification_rationale="Verified.",
+        next_step="No further action is required.",
+    )
+
+    assert result["headline"] == "Keep the $120 no-show fee"
+    assert "Marked as a no-show" in result["key_facts"]
+
+
 def test_authorization_hold_customer_response_explains_capture_status() -> None:
     response = build_customer_resolution_response(
         outcome="explain_authorization_hold",
