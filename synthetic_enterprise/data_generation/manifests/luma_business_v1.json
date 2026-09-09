@@ -1,5 +1,5 @@
 {
-  "alembic_revision": "20260903_0002",
+  "alembic_revision": "20260905_0011",
   "canonical_record_references": {
     "accepted_provider_transfer": [
       "APPT-TRANSFER"
@@ -97,11 +97,11 @@
     "business.refunds": "aa81ede4deb93ad94f1d7b14d039b6e8",
     "business.services": "5c1bc1b9597cb02cf2bf2e46ef8e4ec4",
     "knowledge.policy_documents": "ba71b0597b9b8a74c0ec2cd747e1111a",
-    "knowledge.policy_section_links": "0e4107be8d280e503605b1b2c27a09b5",
-    "knowledge.policy_sections": "fa4702330fa3b4b0269092940e9766e6",
-    "knowledge.policy_versions": "f263df28fd5747457f1a2181709c91d2"
+    "knowledge.policy_section_links": "db29d9147972799be2f9f896baad7a4e",
+    "knowledge.policy_sections": "fb6a6d0fe180fcac85567e764eb90aca",
+    "knowledge.policy_versions": "2508056b481dc201f3f4f172d937841e"
   },
-  "dataset_fingerprint": "ab2455c33f90a2089dae8f7fb83ba2713395bdc1d62b93db36b29924a281b14e",
+  "dataset_fingerprint": "ffa92997bfb09e8bc4bf7c1ac21c92183c415b911c788033fc4748596227419f",
   "dataset_version": "luma_business_v1",
   "distribution_config": {
     "appointments": 2000,
@@ -140,8 +140,8 @@
     "business.refunds": 51,
     "business.services": 25,
     "knowledge.policy_documents": 5,
-    "knowledge.policy_section_links": 34,
-    "knowledge.policy_sections": 115,
+    "knowledge.policy_section_links": 54,
+    "knowledge.policy_sections": 188,
     "knowledge.policy_versions": 7
   },
   "seed": 20260903,

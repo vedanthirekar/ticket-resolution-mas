@@ -4,6 +4,13 @@
 |---|---|
 | Policy ID | `POL-CAN` |
 | Version | `1` |
+| Document type | Internal operating policy |
+| Policy owner | Director of Customer Operations |
+| Approved by | Chief Operating Officer |
+| Document classification | Internal |
+| Intended audience | Customer Operations, Location Leadership, Finance Operations |
+| Approved on | 2023-12-15 |
+| Review cycle | Annual and upon material terms change |
 | Effective from | 2024-01-01 00:00 local time |
 | Effective through | 2025-06-30 23:59:59 local time |
 | Scope | All Luma locations and appointment services |
@@ -11,8 +18,9 @@
 
 ## POL-CAN-v1#1 Purpose
 
-This policy defines notice requirements and charges when an appointment is
-cancelled or a customer does not attend.
+This policy establishes notice requirements, permissible charges, exceptions, and
+record standards for cancelled appointments and customer no-shows during its
+effective period.
 
 ## POL-CAN-v1#2 Definitions
 
@@ -70,3 +78,46 @@ must record a structured reason and approval.
 If the initiating party, event time, or appointment identity is missing or
 contradictory, staff must investigate before retaining, waiving, or returning a fee.
 
+## POL-CAN-v1#7 Roles and responsibilities
+
+### POL-CAN-v1#7.1 Customer Operations
+
+Customer Operations confirms the appointment, initiating party, event time,
+applicable notice interval, fee item, and payment status before explaining or
+proposing a correction.
+
+### POL-CAN-v1#7.2 Providers and location leadership
+
+Providers and location leadership record cancellations, closures, accepted
+replacements, completed services, and approved exceptions promptly and accurately.
+Location leadership reviews documented emergency exceptions within its authority.
+
+## POL-CAN-v1#8 Records and customer communication
+
+### POL-CAN-v1#8.1 Required records
+
+The appointment history retains scheduled times, location timezone, initiating
+party, event author and channel, reason, replacement or transfer relationship,
+fulfillment status, fee item, and any exception approval.
+
+### POL-CAN-v1#8.2 Plain-language notice
+
+Customer communications identify the appointment, applicable notice window, and
+reason for retaining, waiving, or returning a fee. Internal audit, employee, and
+other-customer information is not disclosed unless authorized.
+
+## POL-CAN-v1#9 Related documents
+
+### POL-CAN-v1#9.1 Supporting policies
+
+Payment status and refund limits are governed by `POL-PAY`; membership-credit
+settlement is governed by `POL-MEM`; corrective authorization is governed by
+`POL-ADJ`.
+
+## POL-CAN-v1#10 Document administration
+
+### POL-CAN-v1#10.1 Revision history
+
+| Version | Approved on | Effective from | Change summary |
+|---|---|---|---|
+| 1 | 2023-12-15 | 2024-01-01 | Initial controlled cancellation and no-show policy. |

@@ -91,7 +91,7 @@ export function CustomerEmail({
               {busy === "save" ? "Saving…" : "Save draft"}
             </button>
             <button className="primary-button compact" disabled={Boolean(busy)} onClick={() => submit("send")}>
-              {busy === "send" ? "Sending…" : "Send mock email"}
+              {busy === "send" ? "Sending…" : "Send Email"}
             </button>
           </div>
         </>

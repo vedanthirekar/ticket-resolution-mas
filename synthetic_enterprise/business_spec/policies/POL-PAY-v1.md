@@ -4,6 +4,13 @@
 |---|---|
 | Policy ID | `POL-PAY` |
 | Version | `1` |
+| Document type | Internal financial operations policy |
+| Policy owner | Controller |
+| Approved by | Chief Financial Officer |
+| Document classification | Internal |
+| Intended audience | Finance Operations, Customer Operations, Location Leadership |
+| Approved on | 2023-12-15 |
+| Review cycle | Annual and upon material payment-provider change |
 | Effective from | 2024-01-01 00:00 UTC |
 | Effective through | Open-ended |
 | Scope | All Luma-collected payments in USD |
@@ -11,8 +18,9 @@
 
 ## POL-PAY-v1#1 Purpose
 
-This policy defines payment lifecycle interpretation, duplicate capture review, and
-refund limits.
+This policy establishes how Luma interprets payment lifecycle records, determines
+whether charges represent the same obligation, and controls refunds of
+Luma-collected payments.
 
 ## POL-PAY-v1#2 Definitions
 
@@ -74,3 +82,50 @@ Provider lifecycle events are authoritative for capture, void, and refund succes
 If provider truth remains unavailable or conflicts with internal records, staff must
 reconcile the payment before another financial action.
 
+## POL-PAY-v1#7 Roles and responsibilities
+
+### POL-PAY-v1#7.1 Customer Operations
+
+Customer Operations identifies the disputed transaction, gathers appointment and
+itemized obligation evidence, explains supported results, and submits any proposed
+refund through the approved adjustment process.
+
+### POL-PAY-v1#7.2 Finance Operations
+
+Finance Operations owns payment reconciliation, monitors processor exceptions, and
+investigates conflicting settlement, refund, or tender records.
+
+### POL-PAY-v1#7.3 Approver
+
+An authorized approver confirms the payment, refundable balance, reason, and
+supporting policy before a refund is executed. A reviewer must not represent a
+pending provider request as completed.
+
+## POL-PAY-v1#8 Customer communication and records
+
+### POL-PAY-v1#8.1 Plain-language explanation
+
+Customer-facing explanations distinguish a pending authorization from a posted
+charge and identify the related service or fee when known. Internal processor,
+risk, and fraud-control details are disclosed only when authorized.
+
+### POL-PAY-v1#8.2 Required records
+
+Luma retains the invoice and item association, payment lifecycle events, processor
+references, refund requests and results, approval evidence, and customer
+communication under the corporate financial-records schedule.
+
+## POL-PAY-v1#9 Related documents
+
+### POL-PAY-v1#9.1 Supporting policies
+
+`POL-CAN` determines whether a cancellation or no-show fee is owed; `POL-MEM`
+governs credit settlement; `POL-ADJ` governs refund authorization and execution.
+
+## POL-PAY-v1#10 Document administration
+
+### POL-PAY-v1#10.1 Revision history
+
+| Version | Approved on | Effective from | Change summary |
+|---|---|---|---|
+| 1 | 2023-12-15 | 2024-01-01 | Initial controlled payments and refunds policy. |

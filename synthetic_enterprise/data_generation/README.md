@@ -10,7 +10,7 @@ runtime wheel.
 - Generator: `1.0.0`
 - Seed: `20260903`
 - Reference time: `2026-09-01T12:00:00Z`
-- Schema revision: `20260903_0002`
+- Schema revision: `20260905_0011`
 
 ## Build pipeline
 

@@ -31,6 +31,9 @@ TEST_REQUEST_KEYS = (
     "agent-idempotent-plan",
     "agent-postgres-resume",
     "agent-discovery-without-reference",
+    "agent-regression-auth-hold",
+    "agent-regression-no-show",
+    "agent-regression-booking-failure",
 )
 
 
@@ -191,6 +194,7 @@ async def test_happy_path_persists_provenance_and_proposal(database) -> None:
     assert result["proposal"]["disposition"] == "human_approval"
     assert model.calls == [
         "case_manager_plan",
+        "investigation_decision",
         "investigation_decision",
         "investigation_decision",
         "investigation_decision",
@@ -355,7 +359,153 @@ async def test_investigator_discovers_appointment_before_exact_detail_calls(data
     }
     assert "APPT-CAN-PROVIDER" in references
     assert "PAY-001491-provider-fee" in references
-    assert model.calls == ["case_manager_plan", *("investigation_decision" for _ in range(4))]
+    assert model.calls == ["case_manager_plan", *("investigation_decision" for _ in range(5))]
+
+
+@pytest.mark.parametrize(
+    (
+        "request_key",
+        "complaint",
+        "customer_reference",
+        "category",
+        "material_event_date",
+        "decision_calls",
+        "expected_references",
+    ),
+    [
+        pytest.param(
+            "agent-regression-auth-hold",
+            "My bank shows a pending $60 Luma charge. Was it collected or only a hold?",
+            "CUS-0006",
+            "duplicate_payment",
+            "2026-07-13",
+            [
+                ("get_customer", {}),
+                ("get_customer_appointments", {}),
+                (
+                    "get_appointment_timeline",
+                    {"appointment_reference": "APPT-AUTH-HOLD"},
+                ),
+                (
+                    "get_appointment_payments",
+                    {"appointment_reference": "APPT-AUTH-HOLD"},
+                ),
+            ],
+            {"APPT-AUTH-HOLD", "PAY-001494-auth-hold"},
+            id="authorization-hold",
+        ),
+        pytest.param(
+            "agent-regression-no-show",
+            "I was charged after missing my July 12, 2026 appointment. Is the fee valid?",
+            "CUS-0005",
+            "cancellation_fee_dispute",
+            "2026-07-12",
+            [
+                ("get_customer", {}),
+                ("get_customer_appointments", {}),
+                (
+                    "get_appointment_timeline",
+                    {"appointment_reference": "APPT-NO-SHOW"},
+                ),
+                (
+                    "get_appointment_payments",
+                    {"appointment_reference": "APPT-NO-SHOW"},
+                ),
+            ],
+            {"APPT-NO-SHOW", "PAY-001493-no-show"},
+            id="valid-no-show",
+        ),
+        pytest.param(
+            "agent-regression-booking-failure",
+            "The booking site showed a technical error for September 15, 2026.",
+            "CUS-0024",
+            "online_booking_unavailable",
+            "2026-09-15",
+            [
+                ("get_customer", {}),
+                ("get_customer_booking_attempts", {}),
+                (
+                    "get_booking_attempt_evidence",
+                    {"booking_attempt_reference": "BATT-TECHNICAL-FAILURE"},
+                ),
+            ],
+            {"BATT-TECHNICAL-FAILURE"},
+            id="booking-technical-failure",
+        ),
+    ],
+)
+async def test_natural_language_cases_reach_exact_detail_tools(
+    database,
+    request_key: str,
+    complaint: str,
+    customer_reference: str,
+    category: str,
+    material_event_date: str,
+    decision_calls: list[tuple[str, dict[str, object]]],
+    expected_references: set[str],
+) -> None:
+    async with database.transaction() as session:
+        created = await create_case(
+            session,
+            CreateCaseCommand(
+                complaint_text=complaint,
+                source=CaseSource.API,
+                external_request_key=request_key,
+                claimed_customer_reference=customer_reference,
+            ),
+        )
+
+    decisions = [
+        {
+            "complete": False,
+            "next_call": {
+                "tool_name": tool_name,
+                "arguments": arguments,
+                "purpose": f"Collect authoritative evidence with {tool_name}.",
+            },
+            "rationale": "This is the next required evidence lookup.",
+        }
+        for tool_name, arguments in decision_calls
+    ]
+    decisions.append(
+        {
+            "complete": True,
+            "next_call": None,
+            "rationale": "All required operational evidence is present.",
+        }
+    )
+    model = ScriptedStructuredModel(
+        {
+            "case_manager_plan": [
+                {
+                    "category": category,
+                    "material_event_date": material_event_date,
+                    "required_evidence_types": [],
+                    "investigation_objectives": ["Collect the exact authoritative records."],
+                    "policy_query": "Find the policy governing the established facts.",
+                    "policy_area": None,
+                    "rationale": "The complaint maps to a supported case category.",
+                }
+            ],
+            "investigation_decision": decisions,
+        }
+    )
+    workflow = CaseResolutionWorkflow(
+        database=database,
+        model=model,
+        embedding_provider=HashingEmbeddingProvider(),
+        settings=Settings(_env_file=None),
+    )
+    state = await prepare_run_state(database, workflow, case_id=created.case.id)
+    planned = await workflow.plan_node(state)
+    investigated = await workflow.investigation_node({**state, **planned})
+
+    assert investigated.get("escalation_reason") is None
+    references = {
+        reference for item in investigated["evidence"] for reference in item["source_references"]
+    }
+    assert expected_references <= references
+    assert investigated["evidence_coverage"]["complete"] is True
 
 
 async def test_completed_plan_stage_is_not_repeated(database) -> None:

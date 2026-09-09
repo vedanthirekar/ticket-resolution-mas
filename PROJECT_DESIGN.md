@@ -425,7 +425,7 @@ Chosen application stack:
 |---|---|
 | Language/runtime | Python 3.12+ |
 | Workflow orchestration | LangGraph `StateGraph` |
-| Agent/model integration | LangChain core plus swappable Gemini/OpenRouter adapters; current default is an OpenRouter `:free` model |
+| Agent/model integration | LangChain core plus swappable Anthropic/Gemini/OpenRouter adapters; current default is `claude-sonnet-4-6` |
 | Agent contracts | Pydantic v2 structured models |
 | API | FastAPI and Uvicorn |
 | Persistence | PostgreSQL with pgvector |

@@ -12,6 +12,7 @@ dependencies = [
     "alembic>=1.14,<2",
     "faker>=30,<40",
     "fastapi>=0.116,<1",
+    "langchain-anthropic>=1.0,<2",
     "langchain-core>=1.0,<2",
     "langchain-google-genai>=4,<5",
     "langchain-openai>=1.0,<2",

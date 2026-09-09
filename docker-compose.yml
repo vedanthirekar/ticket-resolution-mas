@@ -3,6 +3,7 @@ name: luma-case-resolution
 services:
   postgres:
     image: pgvector/pgvector:pg16
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-luma}
       POSTGRES_USER: ${POSTGRES_USER:-luma}
@@ -20,6 +21,78 @@ services:
     volumes:
       - luma_postgres_data:/var/lib/postgresql/data
 
+  setup:
+    image: luma-backend:local
+    pull_policy: never
+    env_file:
+      - .env
+    environment:
+      LUMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-luma}:${POSTGRES_PASSWORD:-luma_dev_only}@postgres:5432/${POSTGRES_DB:-luma}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /bin/sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        luma-generate-enterprise --no-write-manifests &&
+        luma-index-policies &&
+        luma-bootstrap &&
+        luma-agent --setup-checkpoints
+    profiles:
+      - setup
+
+  api:
+    image: luma-backend:local
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      LUMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-luma}:${POSTGRES_PASSWORD:-luma_dev_only}@postgres:5432/${POSTGRES_DB:-luma}
+    ports:
+      - "${LUMA_API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  worker:
+    image: luma-backend:local
+    pull_policy: never
+    restart: unless-stopped
+    command: ["luma-worker"]
+    env_file:
+      - .env
+    environment:
+      LUMA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-luma}:${POSTGRES_PASSWORD:-luma_dev_only}@postgres:5432/${POSTGRES_DB:-luma}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: luma-web:local
+    build:
+      context: ./web
+    restart: unless-stopped
+    environment:
+      LUMA_API_URL: http://api:8000
+    ports:
+      - "${LUMA_WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   luma_postgres_data:
-

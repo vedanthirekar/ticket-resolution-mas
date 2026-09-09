@@ -68,8 +68,9 @@ creating operational data to conveniently satisfy an already-written prompt.
 - **M3 - Synthetic Data, Validation, and Freeze: implemented (September 3, 2026).**
   The deterministic generator, policy parser, independent validators, controlled
   operational incidents, reproducibility test, frozen manifest, and
-  case-resolvability matrix are complete. The frozen dataset fingerprint is
-  `ab2455c33f90a2089dae8f7fb83ba2713395bdc1d62b93db36b29924a281b14e`.
+  case-resolvability matrix are complete. Following the September 6, 2026 policy
+  governance refresh, the frozen dataset fingerprint is
+  `ffa92997bfb09e8bc4bf7c1ac21c92183c415b911c788033fc4748596227419f`.
 - **Gate C: approved September 3, 2026.** The frozen dataset and resolvability
   matrix were accepted without amendment. M4 and M5 now treat
   `luma_business_v1` as an immutable upstream contract.

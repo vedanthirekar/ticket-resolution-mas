@@ -5,9 +5,10 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, TypeVar
 
+from langchain_core.exceptions import OutputParserException
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel, SecretStr, ValidationError
 
 from luma.config import Settings
 
@@ -33,6 +34,10 @@ class StructuredModel(Protocol):
         system_prompt: str,
         payload: dict[str, Any],
     ) -> ModelInvocation[OutputT]: ...
+
+
+class StructuredOutputError(RuntimeError):
+    """The provider did not return valid structured output after bounded retries."""
 
 
 class LangChainStructuredModel:
@@ -68,13 +73,31 @@ class LangChainStructuredModel:
         if self._structured_output_method is not None:
             structured_output_options["method"] = self._structured_output_method
         structured = self._model.with_structured_output(schema, **structured_output_options)
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=json.dumps(payload, sort_keys=True, default=str)),
-        ]
+        serialized_payload = json.dumps(payload, sort_keys=True, default=str)
+        correction: str | None = None
         response: Any = None
         for attempt in range(1, self._structured_output_max_attempts + 1):
-            response = await structured.ainvoke(messages)
+            # Start every attempt as a fresh two-message request. In particular, do
+            # not append a later SystemMessage: Anthropic extracts system messages
+            # into one top-level prompt and rejects non-consecutive system messages.
+            attempt_system_prompt = system_prompt
+            if correction is not None:
+                attempt_system_prompt = f"{system_prompt}\n\n{correction}"
+            messages = [
+                SystemMessage(content=attempt_system_prompt),
+                HumanMessage(content=serialized_payload),
+            ]
+            try:
+                response = await structured.ainvoke(messages)
+            except (OutputParserException, ValidationError) as caught_parsing_error:
+                # Some LangChain/provider combinations raise parser failures directly
+                # even with include_raw enabled. Normalize those failures so they get
+                # the same bounded format-correction retry as returned parsing errors.
+                response = {
+                    "parsed": None,
+                    "raw": None,
+                    "parsing_error": caught_parsing_error,
+                }
             if isinstance(response, dict) and response.get("parsed") is not None:
                 break
             if attempt < self._structured_output_max_attempts:
@@ -86,15 +109,11 @@ class LangChainStructuredModel:
                     if parsing_error is not None
                     else "The required schema function was not called."
                 )
-                messages.append(
-                    SystemMessage(
-                        content=(
-                            f"FORMAT CORRECTION (attempt {attempt + 1}): Call the required "
-                            f"{schema.__name__} schema function with corrected arguments. "
-                            "Do not return prose. The previous response failed for this reason:\n"
-                            f"{validation_feedback}"
-                        )
-                    )
+                correction = (
+                    f"FORMAT CORRECTION (attempt {attempt + 1}): Call the required "
+                    f"{schema.__name__} schema function with corrected arguments. "
+                    "Do not return prose. The previous response failed for this reason:\n"
+                    f"{validation_feedback}"
                 )
         if not isinstance(response, dict) or response.get("parsed") is None:
             parsing_error = response.get("parsing_error") if isinstance(response, dict) else None
@@ -102,7 +121,7 @@ class LangChainStructuredModel:
                 type(parsing_error).__name__ if parsing_error is not None else "missing_call"
             )
             error_detail = str(parsing_error)[:1500] if parsing_error is not None else ""
-            raise ValueError(
+            raise StructuredOutputError(
                 "model returned no valid structured output after "
                 f"{self._structured_output_max_attempts} attempts ({error_kind}): {error_detail}"
             )
@@ -146,15 +165,36 @@ class ScriptedStructuredModel:
 
 def build_model(settings: Settings) -> StructuredModel:
     """Build the configured live adapter without making an API call."""
-    if settings.model_api_key is None:
-        raise ValueError("LUMA_MODEL_API_KEY is required for live model execution")
+    api_key = (
+        settings.anthropic_api_key or settings.model_api_key
+        if settings.model_provider == "anthropic"
+        else settings.model_api_key
+    )
+    if api_key is None:
+        expected_key = (
+            "ANTHROPIC_API_KEY or LUMA_MODEL_API_KEY"
+            if settings.model_provider == "anthropic"
+            else "LUMA_MODEL_API_KEY"
+        )
+        raise ValueError(f"{expected_key} is required for live model execution")
 
-    if settings.model_provider == "google_genai":
+    if settings.model_provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        model: BaseChatModel = ChatAnthropic(
+            model_name=settings.model_name,
+            api_key=SecretStr(api_key),
+            max_tokens_to_sample=settings.model_max_output_tokens,
+            max_retries=settings.model_max_retries,
+            timeout=settings.model_timeout_seconds,
+            stop=None,
+        )
+    elif settings.model_provider == "google_genai":
         from langchain_google_genai import ChatGoogleGenerativeAI
 
-        model: BaseChatModel = ChatGoogleGenerativeAI(
+        model = ChatGoogleGenerativeAI(
             model=settings.model_name,
-            api_key=SecretStr(settings.model_api_key),
+            api_key=SecretStr(api_key),
             temperature=0,
             max_tokens=settings.model_max_output_tokens,
             max_retries=settings.model_max_retries,
@@ -165,7 +205,7 @@ def build_model(settings: Settings) -> StructuredModel:
 
         model = ChatOpenAI(
             model=settings.model_name,
-            api_key=SecretStr(settings.model_api_key),
+            api_key=SecretStr(api_key),
             base_url=settings.openrouter_base_url,
             temperature=0,
             max_completion_tokens=settings.model_max_output_tokens,
@@ -179,13 +219,18 @@ def build_model(settings: Settings) -> StructuredModel:
         model,
         provider=settings.model_provider,
         model_name=settings.model_name,
-        # OpenRouter models do not consistently honor JSON response formats. Tool/function
-        # calling gives LangChain an enforceable schema and is supported by the selected
-        # MiniMax free model. Keep the provider-native default for Gemini.
+        # Anthropic supports native schema-constrained output. OpenRouter models do not
+        # consistently honor JSON response formats, so use tool/function calling there.
         structured_output_method=(
-            "function_calling" if settings.model_provider == "openrouter" else None
+            "json_schema"
+            if settings.model_provider == "anthropic"
+            else "function_calling"
+            if settings.model_provider == "openrouter"
+            else None
         ),
         structured_output_max_attempts=(
-            settings.model_max_retries + 1 if settings.model_provider == "openrouter" else 1
+            settings.model_structured_output_max_attempts
+            if settings.model_provider in {"anthropic", "openrouter"}
+            else 1
         ),
     )

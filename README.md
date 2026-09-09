@@ -33,8 +33,8 @@ idempotent refund/membership execution. M8 adds a versioned 60-case dataset,
 deterministic quality/safety graders, fault injection, exportable experiment
 reports, trace metadata, structured logs, and audit queries. An earlier Gemini 3.5
 Flash end-to-end smoke case passed, including transient retry recovery. The runtime
-now also supports OpenRouter and defaults to the structured-output-capable
-`minimax/minimax-m3:free`; configuration rejects paid OpenRouter model IDs. Gate E remains
+supports Anthropic, Gemini, and OpenRouter. The example configuration uses
+`claude-sonnet-4-6`; configuration rejects paid OpenRouter model IDs. Gate E remains
 pending until the complete development and untouched held-out runs finish, and no
 aggregate model-quality numbers are fabricated.
 
@@ -99,6 +99,37 @@ Start PostgreSQL and apply migrations:
 docker compose up -d postgres
 uv run alembic upgrade head
 ```
+
+### Run the full stack with Docker
+
+Copy `.env.example` to `.env` and add the model-provider credentials required for
+your chosen provider. Then build the application images and perform the one-time
+demo database setup:
+
+```powershell
+docker compose build
+docker compose run --rm setup
+```
+
+Start PostgreSQL, the API, the background worker, and the web application:
+
+```powershell
+docker compose up -d
+```
+
+Open `http://localhost:3000`. To inspect or stop the stack:
+
+```powershell
+docker compose ps
+docker compose logs -f api worker web
+docker compose down
+```
+
+The `setup` service generates the initial demo dataset as well as applying migrations,
+indexing policies, bootstrapping the operations account, and preparing LangGraph
+checkpoint tables. Run it only for initial setup of a fresh database. Routine restarts
+only require `docker compose up -d`. The PostgreSQL data remains in the
+`luma_postgres_data` named volume after `docker compose down`.
 
 Generate and independently validate the frozen synthetic dataset:
 
@@ -165,7 +196,8 @@ uv run luma-agent --setup-checkpoints
 ```
 
 To run one ingested case with the configured live model adapter, set
-`LUMA_MODEL_API_KEY` and use its public reference:
+`ANTHROPIC_API_KEY` for the default Anthropic provider (or `LUMA_MODEL_API_KEY`
+for Gemini/OpenRouter) and use its public reference:
 
 ```powershell
 uv run luma-agent CASE-XXXXXXXXXXXX

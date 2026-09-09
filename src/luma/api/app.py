@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
 
-from fastapi import FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import FastAPI, HTTPException, Path, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 from sqlalchemy import func, select
@@ -44,9 +44,12 @@ from luma.api.schemas import (
     OperationsOverviewResponse,
     OperationsResearchRequest,
     OperationsResearchResponse,
+    PolicyDocumentResponse,
+    PolicyDocumentSectionResponse,
     PolicyRetrievalResponse,
     PolicySearchResultResponse,
     ProposalResponse,
+    RecommendationPresentationResponse,
     VerificationResponse,
     WorkflowStageResponse,
 )
@@ -76,9 +79,11 @@ from luma.services.investigations import (
 )
 from luma.services.operations import (
     get_operations_case_workspace,
+    get_operations_policy_document,
     list_operations_cases,
     operations_overview,
 )
+from luma.services.recommendations import build_recommendation_presentation
 from luma.tools.contracts import PolicySearchInput
 from luma.tools.errors import EntityNotFoundError, EntityOwnershipError, ToolError
 
@@ -320,6 +325,38 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for hit in result.data
         ]
 
+    @app.get(
+        "/api/operations/policies/sections/{section_id}",
+        response_model=PolicyDocumentResponse,
+    )
+    async def get_operations_policy(
+        _: OperationsAccountDependency,
+        session: SessionDependency,
+        section_id: str = Path(min_length=1, max_length=96),
+    ) -> PolicyDocumentResponse:
+        document = await get_operations_policy_document(session, section_id=section_id)
+        if document is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="policy not found")
+        return PolicyDocumentResponse(
+            policy_id=document.policy_id,
+            policy_title=document.policy_title,
+            policy_area=document.policy_area,
+            version=document.version,
+            effective_from=document.effective_from,
+            effective_through=document.effective_through,
+            status=document.status,
+            highlighted_section_id=document.highlighted_section_id,
+            sections=[
+                PolicyDocumentSectionResponse(
+                    section_id=section.section_id,
+                    heading=section.heading,
+                    body=section.body,
+                    sort_order=section.sort_order,
+                )
+                for section in document.sections
+            ],
+        )
+
     @app.post(
         "/api/operations/research",
         response_model=OperationsResearchResponse,
@@ -407,6 +444,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         run = workspace.run
         proposal = workspace.proposal
         verification = workspace.verification
+        pending_action = next((item for item in actions if item.status == "pending_approval"), None)
+        if pending_action is not None:
+            recommendation_next_step = "Review and approve or reject the proposed action below."
+        elif workspace.escalations:
+            recommendation_next_step = "Review the evidence and continue the investigation."
+        elif workspace.case.status == "resolved":
+            recommendation_next_step = "No further action is required."
+        else:
+            recommendation_next_step = "Wait for case processing to finish."
+        evidence_payload = [
+            {
+                "evidence_type": item.evidence_type,
+                "condition": item.condition,
+                "content": item.content,
+            }
+            for item in workspace.evidence
+        ]
         return OperationsCaseWorkspaceResponse(
             **CaseResponse.model_validate(workspace.case).model_dump(),
             run=(
@@ -483,6 +537,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     recommended_disposition=verification.recommended_disposition,
                     requires_human=verification.requires_human,
                     rationale=verification.rationale,
+                )
+            ),
+            recommendation=(
+                None
+                if proposal is None
+                else RecommendationPresentationResponse.model_validate(
+                    build_recommendation_presentation(
+                        outcome=proposal.outcome,
+                        supported=None if verification is None else verification.supported,
+                        evidence=evidence_payload,
+                        action_payload=proposal.action_payload,
+                        proposal_rationale=proposal.rationale,
+                        verification_rationale=(
+                            None if verification is None else verification.rationale
+                        ),
+                        next_step=recommendation_next_step,
+                    )
                 )
             ),
             actions=actions,

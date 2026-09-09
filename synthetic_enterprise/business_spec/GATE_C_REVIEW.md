@@ -1,6 +1,6 @@
 # Gate C Dataset Freeze and Resolvability Review
 
-Status: **Approved September 3, 2026**
+Status: **Approved September 3, 2026; policy-corpus refresh approved September 6, 2026**
 
 Tool and agent implementation must not begin until the frozen data and the
 resolvability claims below are accepted or revised.
@@ -13,8 +13,8 @@ resolvability claims below are accepted or revised.
 | Generator | `1.0.0` |
 | Seed | `20260903` |
 | Reference time | `2026-09-01T12:00:00Z` |
-| Alembic revision | `20260903_0002` |
-| Dataset fingerprint | `ab2455c33f90a2089dae8f7fb83ba2713395bdc1d62b93db36b29924a281b14e` |
+| Alembic revision | `20260905_0011` |
+| Dataset fingerprint | `ffa92997bfb09e8bc4bf7c1ac21c92183c415b911c788033fc4748596227419f` |
 
 ## Scale
 
@@ -25,7 +25,7 @@ resolvability claims below are accepted or revised.
 | Invoices / payments / payment events / refunds | 1,460 / 1,461 / 2,807 / 51 |
 | Memberships / ledger entries / allocations | 150 / 563 / 53 |
 | Employee schedules / booking attempts / blocks | 9,909 / 205 / 45 |
-| Policy documents / versions / sections / links | 5 / 7 / 115 / 34 |
+| Policy documents / versions / sections / links | 5 / 7 / 188 / 54 |
 
 ## Review decisions
 
@@ -36,7 +36,8 @@ resolvability claims below are accepted or revised.
 | Ordinary history | Realistic state distributions and connected event/payment/ledger history | Approved |
 | Incident isolation | Canonical incidents are business records; their labels exist only in build manifests | Approved |
 | Expected anomalies | Missing event, conflicting initiators, duplicate capture/consumption, and wrongful provider fee are asserted rather than ignored | Approved |
-| Policy ingestion | Approved Markdown is parsed into 5 documents, 7 temporal versions, and 115 stable sections | Approved |
+| Policy ingestion | Approved Markdown is parsed into 5 documents, 7 temporal versions, and 188 stable sections | Approved |
+| Policy governance | Controlled documents identify ownership, approval, audience, review cycle, responsibilities, records, related policies, and revision history | Approved |
 | Runtime boundary | Generator and private truth are excluded from the runtime wheel | Approved |
 | Resolvability | Five case families are supported with explicit evidence and escalation boundaries | Approved |
 

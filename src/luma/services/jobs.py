@@ -164,14 +164,19 @@ async def fail_job(
         return JobStatus.RETRY_WAIT
 
     job.status = JobStatus.DEAD_LETTER.value
+    attempts_exhausted = (
+        failure_kind is FailureKind.TRANSIENT and job.attempt_count >= job.max_attempts
+    )
+    reason_code = "processing_exhausted" if attempts_exhausted else "processing_failed_permanent"
     session.add(
         Escalation(
             case_id=job.case_id,
-            reason_code="processing_exhausted",
+            reason_code=reason_code,
             details={
                 "job_id": str(job.id),
                 "attempt_count": job.attempt_count,
                 "error_code": job.last_error_code,
+                "failure_kind": failure_kind.value,
             },
             status="open",
         )

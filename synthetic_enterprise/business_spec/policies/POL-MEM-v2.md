@@ -4,6 +4,13 @@
 |---|---|
 | Policy ID | `POL-MEM` |
 | Version | `2` |
+| Document type | Internal membership operations policy |
+| Policy owner | Director of Membership Operations |
+| Approved by | Chief Operating Officer |
+| Document classification | Internal |
+| Intended audience | Membership Operations, Customer Operations, Finance Operations |
+| Approved on | 2025-12-15 |
+| Review cycle | Annual and upon material membership-terms change |
 | Effective from | 2026-01-01 00:00 UTC |
 | Effective through | Open-ended |
 | Scope | Essential, Plus, and Premier memberships |
@@ -11,8 +18,8 @@
 
 ## POL-MEM-v2#1 Purpose
 
-This policy defines monthly membership grants, consumption, expiration, and
-correction from January 1, 2026.
+This policy establishes membership-credit grants, rollover limits, consumption,
+expiration, settlement, and correction requirements from January 1, 2026.
 
 ## POL-MEM-v2#2 Plan grants
 
@@ -79,3 +86,45 @@ A correction or reversal is appended with the exact source where available, a
 structured reason, and approval. Missing, duplicated, or contradictory ledger
 entries require investigation before a correction quantity is chosen.
 
+## POL-MEM-v2#7 Roles and responsibilities
+
+### POL-MEM-v2#7.1 Membership Operations
+
+Membership Operations maintains plan entitlements and terms, reviews ledger and
+allocation discrepancies, and submits supported correction requests.
+
+### POL-MEM-v2#7.2 Customer Operations and Finance Operations
+
+Customer Operations explains balances using the ledger and appointment history.
+Finance Operations confirms renewal-payment status when entitlement depends on a
+successful membership charge.
+
+## POL-MEM-v2#8 Records and customer communication
+
+### POL-MEM-v2#8.1 Required records
+
+Luma retains the membership version, plan entitlement, grants, rollover
+adjustments, expirations, consumptions, source appointments, allocations,
+reversals, corrections, approvals, and relevant renewal-payment results.
+
+### POL-MEM-v2#8.2 Plain-language explanation
+
+Customer communications describe credits as added, used, expired, or restored and
+identify the related membership period or appointment when known. Internal ledger
+and approval terminology is used only when it helps resolve the inquiry.
+
+## POL-MEM-v2#9 Related documents
+
+### POL-MEM-v2#9.1 Supporting policies
+
+Cancellation outcomes are governed by `POL-CAN`; payment and renewal reconciliation
+is governed by `POL-PAY`; corrective authorization is governed by `POL-ADJ`.
+
+## POL-MEM-v2#10 Document administration
+
+### POL-MEM-v2#10.1 Revision history
+
+| Version | Approved on | Effective from | Change summary |
+|---|---|---|---|
+| 1 | 2023-12-15 | 2024-01-01 | Initial policy with 60-day credit expiration. |
+| 2 | 2025-12-15 | 2026-01-01 | Added rollover ceilings and allocation retention, changed new-grant expiration to 90 days, and strengthened duplicate-settlement controls. |

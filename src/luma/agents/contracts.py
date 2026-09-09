@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated, Any, Literal, TypedDict
 
@@ -31,10 +31,81 @@ OperationalToolName = Literal[
 ]
 
 
-class OperationalCall(StrictModel):
-    tool_name: OperationalToolName
-    arguments: dict[str, Any]
+class CustomerScopedArguments(StrictModel):
+    """Model-supplied arguments whose customer scope is verified and injected by the app."""
+
+    customer_reference: str | None = Field(default=None, min_length=1, max_length=24)
+
+
+class CustomerDiscoveryArguments(CustomerScopedArguments):
+    starts_on_or_after: datetime | None = None
+    starts_before: datetime | None = None
+    limit: int | None = Field(default=None, ge=1, le=50)
+
+
+class AppointmentReferenceArguments(CustomerScopedArguments):
+    appointment_reference: str = Field(min_length=1, max_length=32)
+
+
+class MembershipEvidenceArguments(CustomerScopedArguments):
+    membership_reference: str | None = Field(default=None, max_length=32)
+    as_of: datetime
+    limit: int | None = Field(default=None, ge=1, le=200)
+
+
+class BookingAttemptReferenceArguments(CustomerScopedArguments):
+    booking_attempt_reference: str = Field(min_length=1, max_length=32)
+
+
+class OperationalCallBase(StrictModel):
     purpose: str = Field(min_length=3, max_length=300)
+
+
+class GetCustomerCall(OperationalCallBase):
+    tool_name: Literal["get_customer"]
+    arguments: CustomerScopedArguments
+
+
+class GetCustomerAppointmentsCall(OperationalCallBase):
+    tool_name: Literal["get_customer_appointments"]
+    arguments: CustomerDiscoveryArguments
+
+
+class GetAppointmentTimelineCall(OperationalCallBase):
+    tool_name: Literal["get_appointment_timeline"]
+    arguments: AppointmentReferenceArguments
+
+
+class GetAppointmentPaymentsCall(OperationalCallBase):
+    tool_name: Literal["get_appointment_payments"]
+    arguments: AppointmentReferenceArguments
+
+
+class GetMembershipEvidenceCall(OperationalCallBase):
+    tool_name: Literal["get_membership_evidence"]
+    arguments: MembershipEvidenceArguments
+
+
+class GetCustomerBookingAttemptsCall(OperationalCallBase):
+    tool_name: Literal["get_customer_booking_attempts"]
+    arguments: CustomerDiscoveryArguments
+
+
+class GetBookingAttemptEvidenceCall(OperationalCallBase):
+    tool_name: Literal["get_booking_attempt_evidence"]
+    arguments: BookingAttemptReferenceArguments
+
+
+OperationalCall = Annotated[
+    GetCustomerCall
+    | GetCustomerAppointmentsCall
+    | GetAppointmentTimelineCall
+    | GetAppointmentPaymentsCall
+    | GetMembershipEvidenceCall
+    | GetCustomerBookingAttemptsCall
+    | GetBookingAttemptEvidenceCall,
+    Field(discriminator="tool_name"),
+]
 
 
 class InvestigationPlanOutput(StrictModel):
@@ -50,7 +121,7 @@ class InvestigationPlanOutput(StrictModel):
 class InvestigationDecisionOutput(StrictModel):
     complete: bool
     next_call: OperationalCall | None = None
-    rationale: str = Field(min_length=3, max_length=500)
+    rationale: str = Field(min_length=3, max_length=1000)
 
     @model_validator(mode="after")
     def call_matches_completion(self) -> InvestigationDecisionOutput:
@@ -79,11 +150,11 @@ class EvidenceRecord(StrictModel):
     error: str | None = None
 
 
-class EvidenceGateOutput(StrictModel):
-    sufficient: bool
+class EvidenceCoverageOutput(StrictModel):
+    complete: bool
     missing_evidence: list[str] = Field(default_factory=list)
     contradictions: list[str] = Field(default_factory=list)
-    reason_code: str | None = None
+    unavailable_evidence: list[str] = Field(default_factory=list)
 
 
 class PolicyAssessmentOutput(StrictModel):
@@ -179,7 +250,7 @@ class CaseResolutionState(TypedDict, total=False):
     claimed_category: str | None
     plan: dict[str, Any]
     evidence: list[dict[str, Any]]
-    evidence_gate: dict[str, Any]
+    evidence_coverage: dict[str, Any]
     policy_results: list[dict[str, Any]]
     policy_assessment: dict[str, Any]
     supplemental_count: int

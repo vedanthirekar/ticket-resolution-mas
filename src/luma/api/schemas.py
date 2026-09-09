@@ -130,6 +130,25 @@ class PolicySearchResultResponse(BaseModel):
     rrf_score: float
 
 
+class PolicyDocumentSectionResponse(BaseModel):
+    section_id: str
+    heading: str
+    body: str
+    sort_order: int
+
+
+class PolicyDocumentResponse(BaseModel):
+    policy_id: str
+    policy_title: str
+    policy_area: str
+    version: int
+    effective_from: date
+    effective_through: date | None
+    status: str
+    highlighted_section_id: str
+    sections: list[PolicyDocumentSectionResponse]
+
+
 class OperationsResearchRequest(BaseModel):
     tool_name: OperationalToolName
     arguments: dict[str, Any]
@@ -243,6 +262,14 @@ class EscalationResponse(BaseModel):
     resolved_at: datetime | None
 
 
+class RecommendationPresentationResponse(BaseModel):
+    headline: str
+    explanation: str
+    key_facts: list[str]
+    next_step: str
+    technical_rationale: str
+
+
 class OperationsCaseWorkspaceResponse(CaseResponse):
     run: CaseRunResponse | None
     plan: dict[str, object] | None
@@ -251,6 +278,7 @@ class OperationsCaseWorkspaceResponse(CaseResponse):
     policy_retrievals: list[PolicyRetrievalResponse]
     proposal: ProposalResponse | None
     verification: VerificationResponse | None
+    recommendation: RecommendationPresentationResponse | None
     actions: list[ActionDetailResponse]
     escalations: list[EscalationResponse]
     final_communication: CustomerCommunicationResponse | None

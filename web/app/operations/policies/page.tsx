@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { serverApi } from "@/lib/server-api";
 import type { PolicySearchResult } from "@/lib/types";
 
@@ -41,6 +42,7 @@ export default async function PoliciesPage({
             <h2>{result.heading}</h2><p>{result.body}</p>
             <small>{result.policy_title} · version {result.version} · effective {result.effective_from}
               {result.effective_through ? ` through ${result.effective_through}` : " onward"}</small>
+            <Link className="secondary-button policy-document-link" href={`/operations/policies/sections/${encodeURIComponent(result.section_id)}#relevant-policy-section`}>View full policy →</Link>
           </article>
         ))}
         {filters.query && !results.length && <div className="panel empty">No applicable policy sections found.</div>}

@@ -4,6 +4,13 @@
 |---|---|
 | Policy ID | `POL-BOOK` |
 | Version | `1` |
+| Document type | Internal operating policy |
+| Policy owner | Vice President, Service Operations |
+| Approved by | Chief Operating Officer |
+| Document classification | Internal |
+| Intended audience | Digital Product, Customer Operations, Location Leadership |
+| Approved on | 2023-12-15 |
+| Review cycle | Annual and upon material booking-platform change |
 | Effective from | 2024-01-01 00:00 UTC |
 | Effective through | Open-ended |
 | Scope | All Luma locations, services, and customer booking channels |
@@ -11,8 +18,9 @@
 
 ## POL-BOOK-v1#1 Purpose
 
-This policy defines when a service can be offered online and how booking attempts,
-reschedules, and missing appointment reports are interpreted.
+This policy establishes the conditions under which services may be reserved through
+Luma's customer booking channels and the records used to resolve unsuccessful,
+rescheduled, or missing-appointment reports.
 
 ## POL-BOOK-v1#2 Reservation rule
 
@@ -115,3 +123,52 @@ Identity ambiguity requires investigation.
 Availability cannot be diagnosed definitively when required configuration,
 schedule, qualification, capacity, or attempt records are missing or unavailable.
 
+## POL-BOOK-v1#8 Roles and responsibilities
+
+### POL-BOOK-v1#8.1 Digital Product
+
+Digital Product maintains the booking workflow, customer-facing status messages,
+submission controls, and monitoring needed to distinguish a rejected request from a
+technical failure.
+
+### POL-BOOK-v1#8.2 Location leadership
+
+Location leadership maintains accurate hours, closures, service offerings,
+provider assignments, qualifications, schedules, and resource capacity.
+
+### POL-BOOK-v1#8.3 Customer Operations
+
+Customer Operations explains recorded outcomes, protects other customers' and
+employees' private information, and escalates incomplete or conflicting source
+records. Staff must not promise a reservation until a committed appointment exists.
+
+## POL-BOOK-v1#9 Records and privacy
+
+### POL-BOOK-v1#9.1 Required booking records
+
+Submitted attempts retain their customer, channel, requested service, location,
+provider preference when supplied, requested time, result, reason code, correlation
+reference, and committed appointment reference when successful.
+
+### POL-BOOK-v1#9.2 Minimum necessary disclosure
+
+Internal diagnostics may identify the rule or source record that prevented a
+booking. Customer communications disclose only the minimum information needed to
+explain the result and must not reveal another customer's appointment or sensitive
+employee information.
+
+## POL-BOOK-v1#10 Related documents
+
+### POL-BOOK-v1#10.1 Supporting policies
+
+Payment discrepancies are governed by `POL-PAY`; cancellation and provider
+disruption are governed by `POL-CAN`; corrective actions and approvals are governed
+by `POL-ADJ`.
+
+## POL-BOOK-v1#11 Document administration
+
+### POL-BOOK-v1#11.1 Revision history
+
+| Version | Approved on | Effective from | Change summary |
+|---|---|---|---|
+| 1 | 2023-12-15 | 2024-01-01 | Initial controlled online-booking and appointment-record policy. |
