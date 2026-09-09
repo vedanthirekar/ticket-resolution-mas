@@ -1,252 +1,233 @@
-# Agentic Case Resolution Engine
+# Luma Agentic Case Resolution
 
-An AI engineering project that investigates operational support
-cases, applies business policy, proposes a grounded resolution, verifies it, and
-either resolves safely or escalates for human review.
+Luma is a production-minded case-resolution system for a synthetic service business. It accepts
+customer complaints, investigates authoritative operational records, retrieves the policy version
+that applied at the time of the event, proposes a resolution, verifies that proposal, and either
+resolves the case safely or routes it to a human.
 
-This repository is being delivered data-first. The authoritative record of the
-product, data, agent, safety, evaluation, and observability decisions is:
+[View the project presentation](presentation.pdf)
 
-- [PROJECT_DESIGN.md](PROJECT_DESIGN.md)
+## What it demonstrates
 
-The staged delivery plan, including the detailed data-first implementation
-checkpoint and the end-to-end roadmap, is:
+- A bounded LangGraph workflow with typed planning, investigation, policy, proposal, and
+  verification stages.
+- Read-only operational tools that preserve customer scope and attach source provenance.
+- Hybrid policy retrieval over versioned policy sections using PostgreSQL and pgvector.
+- Deterministic evidence checks, action validation, approval interrupts, and idempotent execution.
+- Durable PostgreSQL jobs, worker leases, checkpoint resume, audit history, and SSE updates.
+- An authenticated Next.js operations dashboard and a separate customer intake experience.
+- Synthetic enterprise data, a standalone case simulator, and model-free and live-model evals.
 
-- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
+## Architecture
 
-The design is intentionally a living document. Decisions that are not yet locked
-are marked as proposed or open rather than presented as settled implementation.
+```mermaid
+flowchart LR
+    Customer[Customer intake] --> API[FastAPI]
+    Simulator[Case simulator] --> API
+    API --> DB[(PostgreSQL + pgvector)]
+    DB --> Worker[Durable worker]
+    Worker --> Graph[LangGraph workflow]
+    Graph --> Tools[Operational tools]
+    Tools --> DB
+    Graph --> Policy[Policy retrieval]
+    Policy --> DB
+    Graph --> Verify[Verification and safety gates]
+    Verify --> Resolution[Resolution]
+    Verify --> Human[Human investigation or approval]
+    Dashboard[Next.js operations UI] --> API
+```
 
-## Current implementation status
+The workflow is deliberately bounded: investigation allows at most eight operational tool calls,
+and policy assessment can request only one supplemental lookup. Operational facts, policy rules,
+workflow checkpoints, and evaluation truth remain separate sources of data.
 
-M0 through M8 and Gates A-D are complete. The approved, immutable
-`luma_business_v1` operational dataset is the input contract for case resolution.
-The model-free runtime now provides transactional intake, idempotency, durable
-PostgreSQL job leases, case history, one-account operations sessions, and explicit
-AI artifact storage. Typed operational evidence tools and independently evaluated
-hybrid policy retrieval are implemented. The fixed LangGraph workflow now performs
-typed planning, bounded investigation, deterministic evidence gating, policy
-assessment, one optional supplemental lookup, and grounded proposal generation.
-M7 adds deterministic pre-verification, an adversarial verifier, deterministic
-disposition, durable approval interrupts, target-state revalidation, and
-idempotent refund/membership execution. M8 adds a versioned 60-case dataset,
-deterministic quality/safety graders, fault injection, exportable experiment
-reports, trace metadata, structured logs, and audit queries. An earlier Gemini 3.5
-Flash end-to-end smoke case passed, including transient retry recovery. The runtime
-supports Anthropic, Gemini, and OpenRouter. The example configuration uses
-`claude-sonnet-4-6`; configuration rejects paid OpenRouter model IDs. Gate E remains
-pending until the complete development and untouched held-out runs finish, and no
-aggregate model-quality numbers are fabricated.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed runtime and sequence diagrams.
 
-M9 is implemented. The Next.js operations product includes authenticated overview,
-queue, enriched case workspace, approval handling, and live SSE refresh. A durable
-worker claims PostgreSQL jobs and resumes LangGraph after approval. Customer manual
-intake and the standalone 10-20 second simulator both use the same API, while the
-simulator, employee UI, and builder-only eval reports remain separate surfaces.
-M10 is implemented with CI, source-controlled architecture and sequence diagrams,
-a guarded demo reset/reseed path, deterministic fallback, a threat and
-production-readiness review, an evaluation/error review, and an interview
-presentation narrative. Full live-model Gate E remains open pending adequate
-provider quota and the deferred routing, prompt, node, and handoff quality work.
+## Technology
 
-The M1 business documents begin at:
+- Python 3.12, FastAPI, Pydantic, SQLAlchemy, and Alembic
+- LangGraph with PostgreSQL checkpointing
+- PostgreSQL 16 with pgvector
+- Anthropic, Google Gemini, and OpenRouter model adapters
+- Next.js 16, React 19, and TypeScript
+- pytest, Ruff, mypy, and GitHub Actions
+- Docker Compose for the complete local stack
 
-- [synthetic_enterprise/business_spec/README.md](synthetic_enterprise/business_spec/README.md)
-- [synthetic_enterprise/business_spec/GATE_A_REVIEW.md](synthetic_enterprise/business_spec/GATE_A_REVIEW.md)
-- [synthetic_enterprise/business_spec/GATE_B_REVIEW.md](synthetic_enterprise/business_spec/GATE_B_REVIEW.md)
-- [synthetic_enterprise/business_spec/CASE_RESOLVABILITY.md](synthetic_enterprise/business_spec/CASE_RESOLVABILITY.md)
-- [synthetic_enterprise/business_spec/GATE_C_REVIEW.md](synthetic_enterprise/business_spec/GATE_C_REVIEW.md)
-- [docs/decisions/CASE_RUNTIME_DESIGN.md](docs/decisions/CASE_RUNTIME_DESIGN.md)
-- [docs/decisions/M4_RUNTIME_REVIEW.md](docs/decisions/M4_RUNTIME_REVIEW.md)
-- [docs/decisions/M5_TOOLS_AND_RETRIEVAL.md](docs/decisions/M5_TOOLS_AND_RETRIEVAL.md)
-- [docs/decisions/GATE_D_REVIEW.md](docs/decisions/GATE_D_REVIEW.md)
-- [docs/decisions/M6_AGENT_WORKFLOW.md](docs/decisions/M6_AGENT_WORKFLOW.md)
-- [docs/decisions/M7_VERIFICATION_AND_ACTION_SAFETY.md](docs/decisions/M7_VERIFICATION_AND_ACTION_SAFETY.md)
-- [docs/decisions/M8_EVALUATION_AND_OBSERVABILITY.md](docs/decisions/M8_EVALUATION_AND_OBSERVABILITY.md)
-- [docs/decisions/M9_OPERATIONS_UI.md](docs/decisions/M9_OPERATIONS_UI.md)
-- [docs/decisions/M10_HARDENING_REVIEW.md](docs/decisions/M10_HARDENING_REVIEW.md)
-- [evals/README.md](evals/README.md)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md)
-- [docs/DEMO_RUNBOOK.md](docs/DEMO_RUNBOOK.md)
-- [docs/INTERVIEW_PRESENTATION.md](docs/INTERVIEW_PRESENTATION.md)
-- [docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md)
-- [synthetic_enterprise/data_generation/manifests/luma_business_v1.json](synthetic_enterprise/data_generation/manifests/luma_business_v1.json)
+## Quick start with Docker
+
+Prerequisites: Docker Desktop and Docker Compose.
+
+1. Create your local environment file:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. Add the credential for the model provider selected in `.env`. Anthropic uses
+   `ANTHROPIC_API_KEY`; Gemini and OpenRouter use `LUMA_MODEL_API_KEY`.
+
+3. Build the images and initialize the database:
+
+   ```powershell
+   docker compose build
+   docker compose run --rm setup
+   ```
+
+4. Start the application:
+
+   ```powershell
+   docker compose up -d
+   ```
+
+Open these local endpoints:
+
+- Operations dashboard: <http://localhost:3000/login>
+- Customer intake: <http://localhost:3000/submit>
+- API health check: <http://localhost:8000/health>
+
+The default development operations login comes from `.env.example`:
+
+```text
+Username: operations
+Password: change-me-before-production
+```
+
+Change these credentials outside local development. The application refuses the default password
+when configured for production.
+
+Use `docker compose down` to stop the services. PostgreSQL data remains in the named volume; add
+`-v` only when you intentionally want to delete that data.
 
 ## Local development
 
-Prerequisites:
+Prerequisites: Python 3.12 or 3.13, [uv](https://docs.astral.sh/uv/), Docker Desktop,
+Node.js 24, and npm.
 
-- Python 3.12
-- `uv`
-- Docker Desktop with Docker Compose
-
-Create local configuration:
+Install the Python environment and start PostgreSQL:
 
 ```powershell
 Copy-Item .env.example .env
-```
-
-Install the Python environment:
-
-```powershell
 uv sync --dev
-```
-
-Start PostgreSQL and apply migrations:
-
-```powershell
 docker compose up -d postgres
+```
+
+Initialize the application:
+
+```powershell
 uv run alembic upgrade head
-```
-
-### Run the full stack with Docker
-
-Copy `.env.example` to `.env` and add the model-provider credentials required for
-your chosen provider. Then build the application images and perform the one-time
-demo database setup:
-
-```powershell
-docker compose build
-docker compose run --rm setup
-```
-
-Start PostgreSQL, the API, the background worker, and the web application:
-
-```powershell
-docker compose up -d
-```
-
-Open `http://localhost:3000`. To inspect or stop the stack:
-
-```powershell
-docker compose ps
-docker compose logs -f api worker web
-docker compose down
-```
-
-The `setup` service generates the initial demo dataset as well as applying migrations,
-indexing policies, bootstrapping the operations account, and preparing LangGraph
-checkpoint tables. Run it only for initial setup of a fresh database. Routine restarts
-only require `docker compose up -d`. The PostgreSQL data remains in the
-`luma_postgres_data` named volume after `docker compose down`.
-
-Generate and independently validate the frozen synthetic dataset:
-
-```powershell
 uv run luma-generate-enterprise
-```
-
-Create the single local operations account and start the API:
-
-```powershell
-uv run luma-bootstrap
-uv run luma-api
-```
-
-Build or refresh the local policy-vector index:
-
-```powershell
 uv run luma-index-policies
-uv run python evals/run_policy_retrieval.py
-```
-
-Manual intake and the standalone simulator use the same endpoint:
-
-```http
-POST /api/cases
-{
-  "complaint_text": "I was charged even though the provider cancelled.",
-  "source": "manual",
-  "external_request_key": "manual-demo-001",
-  "claimed_customer_reference": "CUS-000102",
-  "claimed_category": "cancellation_fee_dispute"
-}
-```
-
-The employee-side API requires a bearer session obtained from `POST /api/auth/login`.
-The Next.js BFF stores that token only in an HTTP-only cookie. Simulator controls
-are intentionally absent from both the API and employee dashboard.
-
-Verify database connectivity and the pgvector extension:
-
-```powershell
-uv run python -m luma.db.health
-$env:RUN_DB_TESTS = "1"
-uv run pytest -m integration
-```
-
-Run the default non-model checks:
-
-```powershell
-uv run ruff format --check .
-uv run ruff check .
-uv run mypy
-uv run pytest -m "not integration and not live_model"
-```
-
-The default test command never invokes an external model API. Local credentials and
-database volumes must not be committed.
-
-Initialize LangGraph's PostgreSQL checkpoint tables once after applying Alembic
-migrations:
-
-```powershell
+uv run luma-bootstrap
 uv run luma-agent --setup-checkpoints
 ```
 
-To run one ingested case with the configured live model adapter, set
-`ANTHROPIC_API_KEY` for the default Anthropic provider (or `LUMA_MODEL_API_KEY`
-for Gemini/OpenRouter) and use its public reference:
-
-```powershell
-uv run luma-agent CASE-XXXXXXXXXXXX
-```
-
-This command can incur provider cost. The normal test suite uses a deterministic
-model double and never reads the key.
-
-Run the product locally in separate terminals after bootstrapping PostgreSQL and
-the LangGraph checkpoint tables:
+Run the backend services in separate terminals:
 
 ```powershell
 uv run luma-api
 uv run luma-worker
+```
+
+Run the frontend:
+
+```powershell
 Set-Location web
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000/login` for operations or `/submit` for customer manual
-intake. The frontend defaults to `http://127.0.0.1:8000`; set `LUMA_API_URL` for a
-different backend.
+## Configuration
 
-Run the optional independent intake simulator until Ctrl+C:
+The main settings are documented in [`.env.example`](.env.example):
+
+| Setting | Purpose |
+| --- | --- |
+| `LUMA_DATABASE_URL` | PostgreSQL connection used by the Python services |
+| `LUMA_MODEL_PROVIDER` | `anthropic`, `google_genai`, or `openrouter` |
+| `LUMA_MODEL_NAME` | Provider model identifier |
+| `LUMA_AGENT_MAX_TOOL_CALLS` | Investigation call limit |
+| `LUMA_AGENT_MAX_SUPPLEMENTAL_CALLS` | Policy-requested supplemental lookup limit |
+| `LUMA_OPERATIONS_USERNAME` / `LUMA_OPERATIONS_PASSWORD` | Local operations account |
+
+The default test suite uses deterministic model doubles and does not call an external model.
+Commands using `--live` require provider credentials and may incur cost.
+
+## Testing
+
+Run the Python quality checks and tests:
 
 ```powershell
-uv run luma-simulator
+uv run ruff format --check src tests migrations
+uv run ruff check src tests migrations
+uv run mypy src
+uv run pytest -q
 ```
 
-Use `--count 5` for a bounded demo. It selects tightly linked scenarios from
-`simulator/tickets.jsonl` and waits a random 10-20 seconds between submissions.
-
-Reset and deterministically reseed the local demo database when rehearsal state
-must be removed:
+Database-backed tests are opt-in:
 
 ```powershell
-.\scripts\reset-demo.ps1 -ConfirmDestructiveReset
+docker compose up -d postgres
+$env:RUN_DB_TESTS = "1"
+uv run pytest -m "not live_model" -q
 ```
 
-Validate the 60-case evaluation dataset without calling a model:
+Run the frontend checks:
+
+```powershell
+Set-Location web
+npm run lint
+npm run build
+```
+
+## Evaluation and simulation
+
+Validate the versioned evaluation dataset without calling a model:
 
 ```powershell
 uv run luma-eval
 ```
 
-After selecting and configuring a model, run development cases before the held-out
-split. Live evals may incur provider cost:
+Run live development cases before the held-out split:
 
 ```powershell
 uv run luma-eval --live --split development
 uv run luma-eval --live --split held_out
 ```
+
+Submit a bounded stream of representative cases through the normal intake API:
+
+```powershell
+uv run luma-simulator --count 5
+```
+
+## Repository map
+
+| Path | Contents |
+| --- | --- |
+| `src/luma/agents` | Workflow graph, contracts, prompts, model adapters, and tool execution |
+| `src/luma/api` | FastAPI routes and response schemas |
+| `src/luma/services` | Case, job, action, communication, and recommendation services |
+| `src/luma/retrieval` | Policy indexing and hybrid retrieval |
+| `synthetic_enterprise` | Synthetic business specification and deterministic data builder |
+| `web` | Next.js operations and customer interfaces |
+| `tests` | Unit, integration, and data-integrity coverage |
+| `evals` | Versioned evaluation cases, graders, and reports |
+| `docs` | Architecture, decisions, demo guide, and production-readiness review |
+
+## Further documentation
+
+- [Demo runbook](docs/DEMO_RUNBOOK.md)
+- [Production readiness](docs/PRODUCTION_READINESS.md)
+- [Evaluation report](docs/EVALUATION_REPORT.md)
+- [Agent workflow decision](docs/decisions/M6_AGENT_WORKFLOW.md)
+- [Verification and action safety](docs/decisions/M7_VERIFICATION_AND_ACTION_SAFETY.md)
+- [Operations UI decision](docs/decisions/M9_OPERATIONS_UI.md)
+- [Synthetic business specification](synthetic_enterprise/business_spec/README.md)
+
+## Scope and safety
+
+This is a demonstration system, not a production customer-support deployment. It uses synthetic
+data and a single operations account. Mutating recommendations require explicit approval,
+target-state revalidation, and idempotency checks. See
+[docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) for known limitations and required
+hardening.
