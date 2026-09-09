@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from sqlalchemy import func, or_, select
@@ -25,6 +26,7 @@ from luma.db.models.case_management import (
     OperationsAccount,
     SupportCase,
 )
+from luma.db.models.knowledge import PolicyDocument, PolicySection, PolicyVersion
 
 
 def _product_cases() -> Any:
@@ -58,6 +60,87 @@ class OperationsCaseWorkspace:
     escalations: list[Escalation]
     events: list[CaseEvent]
     final_communication: tuple[CustomerCommunication, str | None] | None
+
+
+@dataclass(frozen=True, slots=True)
+class OperationsPolicySection:
+    section_id: str
+    heading: str
+    body: str
+    sort_order: int
+
+
+@dataclass(frozen=True, slots=True)
+class OperationsPolicyDocument:
+    policy_id: str
+    policy_title: str
+    policy_area: str
+    version: int
+    effective_from: date
+    effective_through: date | None
+    status: str
+    highlighted_section_id: str
+    sections: list[OperationsPolicySection]
+
+
+async def get_operations_policy_document(
+    session: AsyncSession, *, section_id: str
+) -> OperationsPolicyDocument | None:
+    """Return the exact published policy version containing a cited section."""
+    selected = (
+        await session.execute(
+            select(
+                PolicyDocument.policy_id,
+                PolicyDocument.title,
+                PolicyDocument.policy_area,
+                PolicyVersion.id,
+                PolicyVersion.version,
+                PolicyVersion.effective_from,
+                PolicyVersion.effective_through,
+                PolicyVersion.status,
+            )
+            .join(PolicyVersion, PolicyVersion.policy_document_id == PolicyDocument.id)
+            .join(PolicySection, PolicySection.policy_version_id == PolicyVersion.id)
+            .where(
+                PolicySection.section_id == section_id,
+                PolicyVersion.status.in_(["active", "superseded"]),
+            )
+        )
+    ).one_or_none()
+    if selected is None:
+        return None
+
+    section_rows = (
+        await session.execute(
+            select(
+                PolicySection.section_id,
+                PolicySection.heading,
+                PolicySection.body,
+                PolicySection.sort_order,
+            )
+            .where(PolicySection.policy_version_id == selected[3])
+            .order_by(PolicySection.sort_order, PolicySection.section_id)
+        )
+    ).all()
+    return OperationsPolicyDocument(
+        policy_id=selected[0],
+        policy_title=selected[1],
+        policy_area=selected[2],
+        version=selected[4],
+        effective_from=selected[5],
+        effective_through=selected[6],
+        status=selected[7],
+        highlighted_section_id=section_id,
+        sections=[
+            OperationsPolicySection(
+                section_id=row[0],
+                heading=row[1],
+                body=row[2],
+                sort_order=row[3],
+            )
+            for row in section_rows
+        ],
+    )
 
 
 async def operations_overview(session: AsyncSession) -> dict[str, Any]:

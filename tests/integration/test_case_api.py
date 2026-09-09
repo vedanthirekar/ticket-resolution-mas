@@ -198,6 +198,64 @@ async def test_api_intake_retry_and_authenticated_case_queue(database) -> None:
             )
 
 
+async def test_authenticated_employee_can_open_full_policy_at_relevant_section(database) -> None:
+    username = "policy-document-api-test"
+    password = "policy-document-api-test-password"
+    async with database.transaction() as session:
+        await session.execute(
+            delete(OperationsAccount).where(OperationsAccount.username == username)
+        )
+        session.add(
+            OperationsAccount(
+                username=username,
+                password_hash=hash_password(password),
+                display_name="Policy Document Test Operator",
+                active=True,
+            )
+        )
+
+    settings = Settings(_env_file=None)
+    app = create_app(settings)
+    try:
+        async with app.router.lifespan_context(app):
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                unauthorized = await client.get(
+                    "/api/operations/policies/sections/POL-CAN-v2%234.1"
+                )
+                assert unauthorized.status_code == 401
+
+                login = await client.post(
+                    "/api/auth/login", json={"username": username, "password": password}
+                )
+                token = login.json()["access_token"]
+                headers = {"Authorization": f"Bearer {token}"}
+                full_policy = await client.get(
+                    "/api/operations/policies/sections/POL-CAN-v2%234.1",
+                    headers=headers,
+                )
+                assert full_policy.status_code == 200
+                policy_payload = full_policy.json()
+                assert policy_payload["policy_id"] == "POL-CAN"
+                assert policy_payload["version"] == 2
+                assert policy_payload["highlighted_section_id"] == "POL-CAN-v2#4.1"
+                assert len(policy_payload["sections"]) > 1
+                assert [section["sort_order"] for section in policy_payload["sections"]] == sorted(
+                    section["sort_order"] for section in policy_payload["sections"]
+                )
+
+                missing_policy = await client.get(
+                    "/api/operations/policies/sections/POL-MISSING-v1%231",
+                    headers=headers,
+                )
+                assert missing_policy.status_code == 404
+    finally:
+        async with database.transaction() as session:
+            await session.execute(
+                delete(OperationsAccount).where(OperationsAccount.username == username)
+            )
+
+
 async def test_employee_can_document_and_close_human_investigation(database) -> None:
     username = "investigation-api-test"
     password = "investigation-api-test-password"

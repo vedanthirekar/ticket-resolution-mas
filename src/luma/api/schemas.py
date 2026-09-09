@@ -130,6 +130,25 @@ class PolicySearchResultResponse(BaseModel):
     rrf_score: float
 
 
+class PolicyDocumentSectionResponse(BaseModel):
+    section_id: str
+    heading: str
+    body: str
+    sort_order: int
+
+
+class PolicyDocumentResponse(BaseModel):
+    policy_id: str
+    policy_title: str
+    policy_area: str
+    version: int
+    effective_from: date
+    effective_through: date | None
+    status: str
+    highlighted_section_id: str
+    sections: list[PolicyDocumentSectionResponse]
+
+
 class OperationsResearchRequest(BaseModel):
     tool_name: OperationalToolName
     arguments: dict[str, Any]

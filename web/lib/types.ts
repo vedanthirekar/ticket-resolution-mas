@@ -39,6 +39,23 @@ export type PolicySearchResult = {
   rrf_score: number;
 };
 
+export type PolicyDocument = {
+  policy_id: string;
+  policy_title: string;
+  policy_area: string;
+  version: number;
+  effective_from: string;
+  effective_through: string | null;
+  status: string;
+  highlighted_section_id: string;
+  sections: Array<{
+    section_id: string;
+    heading: string;
+    body: string;
+    sort_order: number;
+  }>;
+};
+
 export type OperationsResearchResult = {
   tool_name: string;
   evidence_type: string;
